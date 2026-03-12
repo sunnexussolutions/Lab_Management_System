@@ -22,9 +22,22 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-fallback-only-change-
 # DEBUG is True locally (from .env), False on Render (where DEBUG=False)
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
-# Render gives you a hostname like your-app.onrender.com
-# Locally this will be 'localhost,127.0.0.1'
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+def _env_csv(name, default=''):
+    return [item.strip() for item in os.environ.get(name, default).split(',') if item.strip()]
+
+
+# Render gives you a hostname like your-app.onrender.com.
+# We keep ALLOWED_HOSTS configurable via env var and auto-include Render hostname.
+ALLOWED_HOSTS = _env_csv('ALLOWED_HOSTS', 'localhost,127.0.0.1')
+RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME', '').strip()
+if RENDER_EXTERNAL_HOSTNAME and RENDER_EXTERNAL_HOSTNAME not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
+
+CSRF_TRUSTED_ORIGINS = _env_csv('CSRF_TRUSTED_ORIGINS')
+if RENDER_EXTERNAL_HOSTNAME:
+    render_origin = f'https://{RENDER_EXTERNAL_HOSTNAME}'
+    if render_origin not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(render_origin)
 
 
 # ==============================================================================
