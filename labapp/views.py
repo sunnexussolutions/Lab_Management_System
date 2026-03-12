@@ -9,6 +9,8 @@ from django.views.decorators.http import require_POST
 from django.core.mail import send_mail, EmailMessage
 from django.conf import settings
 from django.utils import timezone
+from django.core.exceptions import ObjectDoesNotExist
+from django.db import DatabaseError, IntegrityError, transaction
 from .models import College, CollegeAdmin, Lab, Professor, Student, Division, Experiment, Submission, Evaluation, Attendance, VivaSession, ExcelUpload
 import json
 import openpyxl
@@ -334,14 +336,22 @@ def college_auth(request):
             username = request.POST.get("username")
             password = request.POST.get("password")
 
-            user = authenticate(request, username=username, password=password)
+            try:
+                user = authenticate(request, username=username, password=password)
+            except DatabaseError:
+                messages.error(request, "Database is not ready. Run migrations and verify DATABASE_URL.")
+                return redirect("college_auth")
 
-            if user is not None and hasattr(user, "collegeadmin"):
-                login(request, user)
-                return redirect("college_dashboard")
+            if user is not None:
+                try:
+                    _ = user.collegeadmin
+                    login(request, user)
+                    return redirect("college_dashboard")
+                except ObjectDoesNotExist:
+                    messages.error(request, "This account is not registered as a college admin.")
+                    return redirect("college_auth")
 
-            else:
-                messages.error(request, "Invalid username or password")
+            messages.error(request, "Invalid username or password")
 
         # REGISTER
         elif "register_submit" in request.POST:
@@ -355,19 +365,27 @@ def college_auth(request):
                 messages.error(request, "Passwords do not match")
                 return redirect("college_auth")
 
-            user = User.objects.create_user(
-                username=username,
-                password=password
-            )
+            try:
+                with transaction.atomic():
+                    user = User.objects.create_user(
+                        username=username,
+                        password=password
+                    )
 
-            college = College.objects.create(
-                name=college_name
-            )
+                    college = College.objects.create(
+                        name=college_name
+                    )
 
-            CollegeAdmin.objects.create(
-                user=user,
-                college=college
-            )
+                    CollegeAdmin.objects.create(
+                        user=user,
+                        college=college
+                    )
+            except IntegrityError:
+                messages.error(request, "Username already exists. Please choose another username.")
+                return redirect("college_auth")
+            except DatabaseError:
+                messages.error(request, "Database is not ready. Run migrations and verify DATABASE_URL.")
+                return redirect("college_auth")
 
             messages.success(request, "Account created successfully. Please login.")
             return redirect("college_auth")
@@ -377,10 +395,20 @@ def college_auth(request):
 @login_required
 def college_dashboard(request):
 
-    college = request.user.collegeadmin.college
+    try:
+        college_admin = request.user.collegeadmin
+    except ObjectDoesNotExist:
+        messages.error(request, "Your account is not linked to a college admin profile.")
+        logout(request)
+        return redirect("college_auth")
 
-    professors = Professor.objects.filter(college=college)
-    labs = Lab.objects.filter(college=college)
+    try:
+        college = college_admin.college
+        professors = Professor.objects.filter(college=college)
+        labs = Lab.objects.filter(college=college)
+    except DatabaseError:
+        messages.error(request, "Database is not ready. Run migrations and verify DATABASE_URL.")
+        return redirect("college_auth")
 
     return render(
         request,
