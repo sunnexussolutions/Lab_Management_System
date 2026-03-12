@@ -1,0 +1,261 @@
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap");
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: "Poppins", sans-serif;
+    background-color: #ebe0da;
+    min-height: 100vh;
+    padding-top: 140px;
+    /* space for fixed header */
+}
+
+.card-header.bg-secondary {
+    background-color: #522b5b;
+    /* overrides Bootstrap's bg-secondary */
+    color: white;
+}
+
+.card-body {
+    background-color: #f5f5ec;
+}
+
+.card-header {
+    background-color: #190019;
+    border-color: #522b5b;
+    color: #e9d9c9;
+}
+
+.btn {
+    background-color: #522b5b;
+    width: 100;
+    margin-top: 4px;
+    align-items: center;
+    color: white;
+}
+
+.btn:hover {
+    background-color: #2b124c;
+    color: white;
+}
+
+#joinCallBtn {
+    background-color: #6e86ab;
+    color: #e9d9c9;
+}
+
+/* Header gradient */
+.bg-gradient-header {
+    background: linear-gradient(90deg, #2b124c, #522b5b, #854f6c, #dfb6b2, #fbe4d8);
+    color: white;
+}
+
+.heading {
+    font-size: 1.8rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+.modal-header {
+    background-color: #735063 !important;
+    color: white;
+}
+
+.text-custom-beige {
+    background-color: #b5ac8a;
+    color: black;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.profile_bg {
+    background-color: #b5ac8a;
+}
+
+/* Profile icon */
+.profile-icon {
+    width: 48px;
+    height: 48px;
+    cursor: pointer;
+    border: 3px solid rgba(255, 255, 255, 0.9);
+    transition: all 0.3s ease;
+}
+
+.profile-icon:hover {
+    transform: scale(1.08);
+
+    border-color: white;
+}
+
+@media (max-width: 576px) {
+    .profile-icon {
+        width: 38px;
+        height: 38px;
+        border-width: 2px;
+        margin-left: 1rem;
+    }
+}
+
+/* Sidebar */
+.sidebar {
+    color: #dee2e6;
+    position: fixed;
+    top: 0;
+    left: -280px;
+    width: 280px;
+    height: 100%;
+    z-index: 1050;
+    transition: left 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 3px 0 15px rgba(0, 0, 0, 0.25);
+    background-color: #b4aa8a;
+    font-size: 0.95rem;
+}
+
+.sidebar.active {
+    left: 0;
+}
+
+.sidebar-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1040;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.35s ease;
+    pointer-events: none;
+}
+
+.sidebar-overlay.active {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+.sub-heading {
+    font-size: 0.95rem;
+    color: #adb5bd;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+}
+
+.sidebar {
+    background-color: #854f6c;
+}
+
+.sidebar a {
+    color: #dee2e6;
+    text-decoration: none;
+    display: block;
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    margin: 0.25rem 0;
+    transition: all 0.2s;
+}
+
+.sidebar a:hover,
+.sidebar a:focus {
+    background: #dfb6b2;
+    color: black;
+}
+
+/* Main content padding when sidebar open */
+main {
+    transition: margin-left 0.35s ease;
+    padding-top: 140px; /* Base padding for fixed header */
+}
+
+.sidebar.active~main {
+    margin-left: 240px;
+}
+
+/* Card styles */
+.card-header {
+    font-weight: 600;
+}
+
+/* Responsive */
+@media (max-width: 992px) {
+    .sidebar {
+        width: 240px;
+        left: -240px;
+        font-size: 0.92rem;
+    }
+
+    /* On mobile/tablet, the sidebar should overlay the content */
+    .sidebar.active~main {
+        margin-left: 0;
+    }
+
+    .sidebar .p-4 {
+        padding: 1.25rem !important;
+    }
+
+    .sidebar h5 {
+        font-size: 1.1rem;
+    }
+
+    .sidebar h6.sub-heading {
+        font-size: 0.8rem;
+    }
+
+    .sidebar a {
+        padding: 0.65rem 1rem;
+    }
+}
+
+.upload-section-header {
+    padding-top: 1.5rem;
+}
+
+.upload-heading {
+    color: #190019;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.75rem;
+}
+
+.upload-divider {
+    width: 80px;
+    border-top: 2px solid #6e86ab;
+    opacity: 0.7;
+    margin: 0 auto;
+}
+
+
+@media (max-width: 576px) {
+    main.container-fluid {
+        padding-top: 140px !important;
+    }
+
+    .upload-section-header {
+        padding-top: 2.5rem;
+        padding-bottom: 0.5rem;
+    }
+
+    .upload-heading {
+        font-size: 1.35rem;
+        margin-bottom: 0.75rem !important;
+    }
+
+    .upload-divider {
+        width: 70px;
+        border-top-width: 2px;
+    }
+
+
+    .card.shadow-sm.border-0.mb-5 {
+        margin-top: 0.5rem;
+    }
+}
+
+@media (max-width: 400px) {
+    .upload-heading {
+        font-size: 1.25rem;
+    }
+}

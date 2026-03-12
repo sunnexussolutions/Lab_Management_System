@@ -1,0 +1,183 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LMS – Lab Management System</title>
+  
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="{% static 'css/footer.css' %}" />
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, #f0f4ff 0%, #e0eaff 100%);
+      min-height: 100vh;
+      color: #1e293b;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+    }
+
+    .container {
+      text-align: center;
+      max-width: 620px;
+      width: 100%;
+    }
+
+    header {
+      margin-bottom: 3.5rem;
+    }
+
+    h1 {
+      font-size: 3.1rem;
+      font-weight: 700;
+      color: #1e40af;
+      letter-spacing: -0.8px;
+      margin-bottom: 0.6rem;
+    }
+
+    .subtitle {
+      font-size: 1.18rem;
+      color: #475569;
+      font-weight: 400;
+      opacity: 0.9;
+    }
+
+    .login-options {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.6rem;
+      margin-top: 2.5rem;
+    }
+
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 2.4rem 1.8rem;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+      transition: all 0.28s ease;
+      text-decoration: none;
+      color: inherit;
+      border: 1px solid #e2e8f0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.14);
+      border-color: #3b82f6;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 5px;
+      background: linear-gradient(90deg, #3b82f6, #60a5fa);
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.35s ease;
+    }
+
+    .card:hover::before {
+      transform: scaleX(1);
+    }
+
+    .card h2 {
+      font-size: 1.55rem;
+      font-weight: 600;
+      color: #1e40af;
+      margin-bottom: 0.9rem;
+    }
+
+    .card p {
+      color: #64748b;
+      font-size: 0.98rem;
+      line-height: 1.5;
+      margin-bottom: 1.4rem;
+    }
+
+    .btn {
+      display: inline-block;
+      background: #2563eb;
+      color: white;
+      padding: 0.9rem 2.2rem;
+      border-radius: 10px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.25s ease;
+      font-size: 1.02rem;
+    }
+
+    .btn:hover {
+      background: #1d4ed8;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(37, 99, 235, 0.3);
+    }
+
+    footer {
+      margin-top: 5rem;
+      color: #64748b;
+      font-size: 0.9rem;
+      text-align: center;
+    }
+
+    @media (max-width: 640px) {
+      h1 { font-size: 2.6rem; }
+      .login-options { grid-template-columns: 1fr; }
+      .card { padding: 2rem 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <h1>Lab Management System</h1>
+      <p class="subtitle">Efficient lab scheduling, resource tracking & attendance for colleges</p>
+    </header>
+
+    <div class="login-options">
+
+      <a href="/college/login/" class="card">
+        <h2>College Admin</h2>
+        <p>Manage departments, professors, labs, timetables and system settings</p>
+        <div class="btn">College Login</div>
+      </a>
+
+      <a href="/professor/login/" class="card">
+        <h2>Professor / Faculty</h2>
+        <p>Record attendance, upload lab marks, view schedule & manage experiments</p>
+        <div class="btn">Professor Login</div>
+      </a>
+
+      <a href="/student/login/" class="card">
+        <h2>Student</h2>
+        <p>View your lab timetable, attendance record, marks and lab assignments</p>
+        <div class="btn">Student Login</div>
+      </a>
+
+    </div>
+  </div>
+
+  <footer class="global-footer">
+    <div class="footer-content">
+      <div class="footer-developed-by">DEVELOPED BY : SUN NEXUS SOLUTIONS</div>
+      <div class="footer-university">SANDIP UNIVERSITY</div>
+    </div>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,226 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Evaluate Submission</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="{% static 'css/footer.css' %}" />
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { font-family: 'Poppins', sans-serif; background: #f5f7fa; }
+      .card { border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+      .screenshot-container { max-width: 100%; height: 400px; object-fit: contain; border: 1px solid #dee2e6; border-radius: 8px; }
+      
+      /* Iframe specific styles */
+      body.in-iframe { background: #fff; }
+      body.in-iframe .container { padding-top: 0 !important; padding-bottom: 0 !important; }
+      body.in-iframe .card { box-shadow: none; border-radius: 0; border: none; }
+      body.in-iframe .card-header, body.in-iframe .back-btn-container { display: none; }
+      body.in-iframe .card-body { padding: 1rem !important; }
+      body.in-iframe h5 { font-size: 1.1rem; }
+    </style>
+  </head>
+  <body>
+    <div class="container py-5" id="mainContainer">
+      <div class="row justify-content-center">
+        <div class="col-lg-10">
+
+          <!-- Success / Error Messages -->
+          {% if messages %}
+          <div class="mb-4">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show d-flex align-items-center gap-2" role="alert">
+              <i class="bi bi-check-circle-fill fs-5"></i>
+              <strong>{{ message }}</strong>
+              <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endfor %}
+          </div>
+          {% endif %}
+
+          <div class="card">
+            <div class="card-header bg-primary text-white">
+              <h4 class="mb-0">
+                <i class="bi bi-check-circle me-2"></i>
+                Evaluate Submission
+              </h4>
+            </div>
+            <div class="card-body p-4">
+              <!-- Student Info -->
+              <div class="row mb-4">
+                <div class="col-md-6">
+                  <h5>Student Information</h5>
+                  <p><strong>Name:</strong> {{ submission.student.user.get_full_name|default:submission.student.user.username }}</p>
+                  <p><strong>PRN:</strong> {{ submission.student.prn }}</p>
+                  <p><strong>Experiment:</strong>
+                    {% if submission.experiment_name %}
+                      {{ submission.experiment_name }}
+                    {% elif submission.experiment %}
+                      {{ submission.experiment.title }}
+                    {% else %}
+                      —
+                    {% endif %}
+                  </p>
+                  <p><strong>Submitted:</strong> {{ submission.submitted_at|date:"d M Y, H:i" }}</p>
+                </div>
+                <div class="col-md-6">
+                  <h5>Submission Status</h5>
+                  <span class="badge bg-{% if submission.status == 'evaluated' %}success{% else %}warning{% endif %} fs-6">
+                    {{ submission.status|title }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Screenshots -->
+              <div class="row mb-4">
+                <div class="col-md-6">
+                  <h5>Code Screenshot</h5>
+                  {% if submission.code_screenshot %}
+                    <img src="{{ submission.code_screenshot.url }}" alt="Code Screenshot" class="screenshot-container w-100">
+                  {% else %}
+                    <div class="text-center p-4 bg-light rounded">
+                      <i class="bi bi-image text-muted fs-1"></i>
+                      <p class="text-muted mt-2">No code screenshot uploaded</p>
+                    </div>
+                  {% endif %}
+                </div>
+                <div class="col-md-6">
+                  <h5>Output Screenshot</h5>
+                  {% if submission.output_screenshot %}
+                    <img src="{{ submission.output_screenshot.url }}" alt="Output Screenshot" class="screenshot-container w-100">
+                  {% else %}
+                    <div class="text-center p-4 bg-light rounded">
+                      <i class="bi bi-image text-muted fs-1"></i>
+                      <p class="text-muted mt-2">No output screenshot uploaded</p>
+                    </div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <!-- Evaluation Form -->
+              <form method="POST">
+                {% csrf_token %}
+                <h5 class="mb-3">Evaluation Marks</h5>
+                
+                <div class="card border-0 shadow-sm rounded-3 overflow-hidden mb-4">
+                  <div class="table-responsive">
+                    <table class="table table-bordered table-hover align-middle mb-0" id="marksTable">
+                      <thead class="table-dark text-center align-middle">
+                        <tr>
+                          <th style="width: 25%;">Experiment (5 M)</th>
+                          <th style="width: 25%;">Write-up (5 M)</th>
+                          <th style="width: 25%;">Viva (5 M)</th>
+                          <th style="width: 25%;">Total (15 M)</th>
+                        </tr>
+                      </thead>
+                      <tbody class="bg-white text-center">
+                        <tr>
+                          <td>
+                            <input type="number" class="form-control text-center exp-marks" id="experiment_marks" name="experiment_marks" min="0" max="5" step="0.1"
+                                   value="{{ evaluation.experiment_marks|default:0 }}" required>
+                          </td>
+                          <td>
+                            <input type="number" class="form-control text-center exp-writing" id="writeup_marks" name="writeup_marks" min="0" max="5" step="0.1"
+                                   value="{{ evaluation.writeup_marks|default:0 }}" required>
+                          </td>
+                          <td>
+                            <input type="number" class="form-control text-center exp-viva" id="viva_marks" name="viva_marks" min="0" max="5" step="0.1"
+                                   value="{{ evaluation.viva_marks|default:0 }}" required>
+                          </td>
+                          <td>
+                            <input type="number" class="form-control text-center exp-total fw-bold" id="total_marks" value="0" readonly>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div class="mb-4">
+                  <label class="form-label fw-semibold">Comments</label>
+                  <textarea class="form-control" name="comments" rows="3" placeholder="Add evaluation comments...">{{ evaluation.comments }}</textarea>
+                </div>
+
+                <div class="d-flex gap-2">
+                  <button type="submit" class="btn btn-success px-4">
+                    <i class="bi bi-check-circle me-2"></i>Save Evaluation
+                  </button>
+                  <a href="{% url 'professor_dashboard' %}" class="btn btn-secondary px-4 back-btn-container">
+                    <i class="bi bi-arrow-left me-2"></i>Back to Dashboard
+                  </a>
+                </div>
+              </form>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+      // Calculate Total Marks dynamically
+      document.addEventListener('DOMContentLoaded', function() {
+        const expInput = document.getElementById('experiment_marks');
+        const writeupInput = document.getElementById('writeup_marks');
+        const vivaInput = document.getElementById('viva_marks');
+        const totalInput = document.getElementById('total_marks');
+        
+        function constrainInput(input) {
+          let val = parseFloat(input.value);
+          if (isNaN(val)) return 0;
+          if (val > 5) {
+            input.value = 5;
+            return 5;
+          }
+          if (val < 0) {
+            input.value = 0;
+            return 0;
+          }
+          return val;
+        }
+
+        function updateTotal() {
+          const exp = constrainInput(expInput);
+          const writeup = constrainInput(writeupInput);
+          const viva = constrainInput(vivaInput);
+          const total = exp + writeup + viva;
+          totalInput.value = total.toFixed(1);
+        }
+
+        [expInput, writeupInput, vivaInput].forEach(input => {
+          if (input) {
+            input.addEventListener('input', updateTotal);
+          }
+        });
+
+        // Initial Calculation
+        updateTotal();
+      });
+
+      // If we are inside an iframe, apply compact styles to fit properly
+      if (window.self !== window.top) {
+        document.body.classList.add('in-iframe');
+        // Handle form submission to prevent redirecting to dashboard inside iframe
+        const form = document.querySelector('form');
+        if (form) {
+          form.addEventListener('submit', function() {
+            // Optional: send message to parent window about successful submission
+            setTimeout(() => {
+              window.parent.postMessage({ type: 'EVALUATION_SUBMITTED' }, '*');
+            }, 500);
+          });
+        }
+      }
+    </script>
+    <footer class="global-footer no-iframe">
+        <div class="footer-content">
+            <div class="footer-developed-by">DEVELOPED BY : SUN NEXUS SOLUTIONS</div>
+            <div class="footer-university">SANDIP UNIVERSITY</div>
+        </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,391 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>College Admin Portal</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="stylesheet" href="{% static 'css/footer.css' %}" />
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(90deg, #71967d, #afcab8, #b6e5d2);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      color: #1e293b;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 420px;
+      background: #cdf3e7;
+      border-radius: 16px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.22);
+      overflow: hidden;
+    }
+
+    .form-header {
+      background: linear-gradient(90deg, #3ebdc6 0%, #a8ead5 100%);
+      color: white;
+      padding: 2.2rem 2rem;
+      text-align: center;
+    }
+
+    .form-header h1 {
+      font-size: 1.85rem;
+      font-weight: 700;
+      margin-bottom: 0.4rem;
+    }
+
+    .form-header p {
+      font-size: 0.95rem;
+      opacity: 0.9;
+    }
+
+    .form-body {
+      padding: 2.2rem 2.5rem;
+    }
+
+    .form-group {
+      margin-bottom: 1.5rem;
+      position: relative;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 0.55rem;
+      font-weight: 500;
+      color: #155f48;
+      font-size: 0.95rem;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 0.95rem 2.8rem 0.95rem 1.1rem;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: 1rem;
+      transition: all 0.2s ease;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.18);
+    }
+
+    .password-toggle {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-12%);
+      cursor: pointer;
+      color: #2c6050;
+      font-size: 1.1rem;
+    }
+
+    .password-toggle:hover {
+      color: #3b82f6;
+    }
+
+    .match-message {
+      font-size: 0.85rem;
+      margin-top: 0.4rem;
+      min-height: 1.2em;
+    }
+
+    .match-message.match {
+      color: #10b981;
+    }
+
+    .match-message.no-match {
+      color: #ef4444;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 1rem;
+      background: linear-gradient(90deg, #3ebdc6 0%, #a8ead5 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1.05rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      margin-top: 0.8rem;
+    }
+
+    .btn:hover {
+      background: #3ebdc6;
+      transform: translateY(-1px);
+      box-shadow: #3ebdc6;
+    }
+
+    .btn-secondary {
+      background: #6b7280;
+      margin-top: 1rem;
+    }
+
+    .btn-secondary:hover {
+      background: #4b5563;
+    }
+
+    .toggle-link {
+      text-align: center;
+      margin-top: 1.6rem;
+      color: #6b7280;
+      font-size: 0.95rem;
+    }
+
+    .toggle-link a {
+      color: #3ebdc6;
+      font-weight: 600;
+      text-decoration: none;
+    }
+
+    .toggle-link a:hover {
+      text-decoration: underline;
+    }
+
+    .form-switch {
+      display: none;
+    }
+
+    #login-form.active,
+    #register-form.active {
+      display: block;
+    }
+
+    @media (max-width: 480px) {
+      .form-body {
+        padding: 1.8rem 1.8rem;
+      }
+
+      .form-header h1 {
+        font-size: 1.65rem;
+      }
+    }
+
+    .form-switch {
+      display: none;
+    }
+
+    .form-switch.active {
+      display: block;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="container">
+
+    <!-- Login Form -->
+    <div id="login-form" class="form-switch active">
+      <div class="form-header">
+        <h1>Admin Login</h1>
+        <p>Sign in to manage college records</p>
+      </div>
+      <div class="form-body">
+        {% if messages %}
+        <div class="alert alert-danger">
+          {% for message in messages %}
+          {{ message }}
+          {% endfor %}
+        </div>
+        {% endif %}
+
+
+        <form method="POST">
+          {% csrf_token %}
+
+          <div class="form-group">
+            <label for="loginUsername">Username</label>
+
+            <input type="text" id="loginUsername" name="username" placeholder="admin" required
+              autocomplete="username" />
+
+          </div>
+
+
+          <div class="form-group">
+
+            <label for="loginPassword">Password</label>
+
+            <input type="password" id="loginPassword" name="password" placeholder="••••••••" required
+              autocomplete="current-password" />
+
+            <i class="fa-solid fa-eye password-toggle" id="toggleLoginPass"></i>
+
+          </div>
+
+          <button type="submit" name="login_submit" class="btn">
+            Sign In
+          </button>
+
+        </form>
+
+        <div class="toggle-link">
+          Don't have an account? <a href="javascript:void(0)" onclick="switchToRegister()">Register here</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Register Form -->
+    <div id="register-form" class="form-switch">
+      <div class="form-header">
+        <h1>Create Account</h1>
+        <p>Register as College Administrator</p>
+      </div>
+      <div class="form-body">
+        <form method="POST">
+          {% csrf_token %}
+
+          <div class="form-group">
+            <label for="collegeName">College Name</label>
+
+            <input type="text" id="collegeName" name="college_name" placeholder="e.g. Government College of Engineering"
+              required />
+
+          </div>
+
+
+          <div class="form-group">
+
+            <label for="regUsername">Username</label>
+
+            <input type="text" id="regUsername" name="username" placeholder="Choose a username" required
+              autocomplete="username" />
+
+          </div>
+
+
+          <div class="form-group">
+
+            <label for="regPassword">Password</label>
+
+            <input type="password" id="regPassword" name="password" placeholder="Minimum 8 characters" required
+              autocomplete="new-password" />
+
+            <i class="fa-solid fa-eye password-toggle" id="toggleRegPass"></i>
+
+          </div>
+
+
+          <div class="form-group">
+
+            <label for="confirmPassword">Confirm Password</label>
+
+            <input type="password" id="confirmPassword" name="confirm_password" placeholder="Confirm your password"
+              required autocomplete="new-password" />
+
+            <i class="fa-solid fa-eye password-toggle" id="toggleConfirmPass"></i>
+
+            <div id="passwordMatchMessage" class="match-message"></div>
+
+          </div>
+
+
+          <button type="submit" name="register_submit" class="btn">
+            Create Account
+          </button>
+
+        </form>
+
+        <div class="toggle-link">
+          Already have an account? <a href="javascript:void(0)" onclick="switchToLogin()">Login here</a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+
+    // Toggle between forms
+    function switchToRegister() {
+      document.getElementById("login-form").classList.remove("active");
+      document.getElementById("register-form").classList.add("active");
+    }
+
+    function switchToLogin() {
+      document.getElementById("register-form").classList.remove("active");
+      document.getElementById("login-form").classList.add("active");
+    }
+
+    // Show/hide password toggle
+    function setupPasswordToggle(inputId, toggleId) {
+      const input = document.getElementById(inputId);
+      const toggle = document.getElementById(toggleId);
+
+      toggle.addEventListener('click', () => {
+        const type = input.type === 'password' ? 'text' : 'password';
+        input.type = type;
+        toggle.classList.toggle('fa-eye');
+        toggle.classList.toggle('fa-eye-slash');
+      });
+    }
+
+    if (document.getElementById('loginPassword'))
+      setupPasswordToggle('loginPassword', 'toggleLoginPass');
+
+    if (document.getElementById('regPassword'))
+      setupPasswordToggle('regPassword', 'toggleRegPass');
+
+    if (document.getElementById('confirmPassword'))
+      setupPasswordToggle('confirmPassword', 'toggleConfirmPass');
+
+    // Real-time password match check (registration)
+    const regPass = document.getElementById('regPassword');
+    const confirmPass = document.getElementById('confirmPassword');
+    const matchMsg = document.getElementById('passwordMatchMessage');
+
+    function checkPasswordMatch() {
+      const passVal = regPass.value;
+      const confirmVal = confirmPass.value;
+
+      if (!confirmVal) {
+        matchMsg.textContent = '';
+        confirmPass.style.borderColor = '#cbd5e1';
+        return;
+      }
+
+      if (passVal === confirmVal) {
+        matchMsg.textContent = 'Passwords match ✓';
+        matchMsg.className = 'match-message match';
+        confirmPass.style.borderColor = '#10b981';
+      } else {
+        matchMsg.textContent = 'Passwords do not match ✗';
+        matchMsg.className = 'match-message no-match';
+        confirmPass.style.borderColor = '#ef4444';
+      }
+    }
+
+    if (regPass && confirmPass) {
+      regPass.addEventListener('input', checkPasswordMatch);
+      confirmPass.addEventListener('input', checkPasswordMatch);
+    }
+  </script>
+
+  <footer class="global-footer">
+    <div class="footer-content">
+      <div class="footer-developed-by">DEVELOPED BY : SUN NEXUS SOLUTIONS</div>
+      <div class="footer-university">SANDIP UNIVERSITY</div>
+    </div>
+  </footer>
+</body>
+
+</html>

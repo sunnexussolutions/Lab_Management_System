@@ -1,0 +1,1006 @@
+{% load static %}
+{% load custom_tags %}
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Student Dashboard - Lab Management System</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="{% static 'css/student_dashboard.css' %}" />
+  <link rel="stylesheet" href="{% static 'css/footer.css' %}" />
+</head>
+
+<body>
+
+    <!-- ================= HEADER ================= -->
+    <header class="bg-gradient-header shadow-sm fixed-top">
+        <div class="container-fluid px-4 py-3 d-flex align-items-center justify-content-center position-relative">
+
+            <div class="profile-icon rounded-circle overflow-hidden position-absolute start-0 ms-4" id="profileToggle">
+
+                {% if student.profile_pic %}
+                <img src="{{ student.profile_pic.url }}" class="w-100 h-100 object-fit-cover" />
+                {% else %}
+                <img src="https://www.kindpng.com/picc/m/22-223965_no-profile-picture-icon-circle-member-icon-png.png"
+                    class="w-100 h-100 object-fit-cover" />
+                {% endif %}
+
+            </div>
+
+            <div class="text-center">
+                <h1 class="heading  mb-1">LAB MANAGEMENT SYSTEM</h1>
+                <h4 class="mb-0 ">Student Dashboard</h4>
+                <div class="mt-2">
+                    <strong>{{ request.user.username }}</strong> |
+                    PRN: {{ student.prn }}
+                </div>
+            </div>
+        </div>
+    </header>
+    {% if messages %}
+    <div class="container mt-3">
+        {% for message in messages %}
+        <div class="alert alert-success alert-dismissible fade show">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- ================= SIDEBAR ================= -->
+    <nav class="sidebar" id="sidebar">
+        <div class="p-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h5 class="mb-0 fw-semibold">Menu</h5>
+                <button class="btn text-white p-0" id="closeSidebar">
+                    <i class="bi bi-x-lg fs-4"></i>
+                </button>
+            </div>
+
+            <ul class="list-unstyled">
+                <li><a href="#" data-bs-toggle="modal" data-bs-target="#editProfileModal"><i
+                            class="bi bi-person-gear me-2"></i>Edit Profile</a></li>
+                <li><a href="#" data-bs-toggle="modal" data-bs-target="#attendanceModal"><i
+                            class="bi bi-list-check me-2"></i>Attended Labs</a></li>
+                <li><a href="#" data-bs-toggle="modal" data-bs-target="#marksModal"><i
+                            class="bi bi-pencil-square me-2"></i>View Marks</a></li>
+                <li><a href="#" data-bs-toggle="modal" data-bs-target="#viewLabsModal"><i
+                            class="bi bi-book-half me-2"></i>View Labs</a></li>
+                <li><a href="#" data-bs-toggle="modal" data-bs-target="#historyModal"><i
+                            class="bi bi-clock-history me-2"></i>Previous Screenshots</a></li>
+
+                <li><a href="{% url 'student_logout' %}"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- ================= MAIN ================= -->
+    <main class="container-fluid  px-5">
+
+        <div class="upload-section-header text-center mb-4">
+            <h3 class="upload-heading">Upload Files Here</h3>
+            <hr class="upload-divider mx-auto">
+        </div>
+        <!-- ================= Course Materials Section ================= -->
+
+        <!-- <div class="card shadow-sm border-0 mb-4">
+
+<div class="card-header bg-dark text-white">
+<h5 class="mb-0">
+<i class="bi bi-book-fill me-2"></i>
+Course Materials
+</h5>
+</div>
+
+<div class="card-body">
+
+<select id="courseSelect" class="form-select mb-3">
+
+<option value="" disabled selected>
+Select Course
+</option>
+
+{% for lab in labs %}
+<option value="{{ lab.id }}">
+{{ lab.name }}
+</option>
+{% endfor %}
+
+</select>
+
+ COURSE DETAILS -->
+        <!-- <div id="courseDetails" style="display:none;">
+
+<p>
+<strong>Syllabus :</strong>
+<a id="syllabusLink" target="_blank"></a>
+</p>
+
+<p>
+<strong>Lab Manual :</strong>
+<a id="manualLink" target="_blank"></a>
+</p>
+
+<h6>Experiments</h6>
+
+<ul id="experimentList"></ul>
+
+</div>
+
+</div>
+
+</div> -->
+
+        <!-- ===== Upload Form ===== -->
+        <div class="card shadow-sm border-0 mb-5">
+            <div class="card-header bg-secondary text-white">
+                <h5><i class="bi bi-file-code-fill me-2"></i>Submit Experiment</h5>
+            </div>
+
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data">
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label class="form-label">Select Lab</label>
+                        <select class="form-select" name="lab_id" id="labSelectUpload" required>
+
+                            <option value="">Select Lab</option>
+
+                            {% for lab in labs %}
+                            <option value="{{ lab.id }}">{{ lab.name }}</option>
+                            {% endfor %}
+
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Experiment Name</label>
+                        <input type="text" name="experiment_name" class="form-control"
+                            placeholder="e.g. Experiment 3 - Binary Search" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Upload Code Screenshot</label>
+                        <input type="file" name="codeScreenshot" class="form-control" accept="image/*" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Upload Output Screenshot</label>
+                        <input type="file" name="outputScreenshot" class="form-control" accept="image/*" required>
+                    </div>
+
+                    <button type="submit" class="btn w-100">Submit</button>
+                </form>
+            </div>
+        </div>
+    </main>
+    <!-- ================= LIVE VIVA SECTION ================= -->
+
+    <div class="card shadow-sm border-0 text-center mx-auto mb-5" style="max-width: 700px;">
+        <div class="card-header  text-white">
+            <h5 class="mb-0">
+                <i class="bi bi-camera-video-fill me-2"></i> Live Viva Call
+            </h5>
+        </div>
+
+        <div class="card-body">
+
+            {% if active_session %}
+
+            <p class="text-success fw-bold">Professor is calling you!</p>
+
+            <button class="btn btn-success px-4" onclick="startCall()">
+                Join Call
+            </button>
+
+            <div id="jitsi-container" style="height:500px; display:none; margin-top:20px;"></div>
+
+            {% else %}
+
+            <p class="text-muted">No active viva session right now.</p>
+
+            {% endif %}
+
+        </div>
+    </div>
+    <!-- ================= MODALS ================= -->
+
+    <!-- Attendance -->
+    <div class="modal fade" id="attendanceModal">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5>Attendance Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body">
+
+                    <!-- Dropdown -->
+                    <select id="attendanceSelect" class="form-select mb-4">
+                        {% for lab in attendance_data %}
+                        <option value="attendance-{{ lab.lab_id }}">
+                            {{ lab.lab_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+
+                    <!-- Lab Sections -->
+                    {% for lab in attendance_data %}
+                    <div class="attendance-section" id="attendance-{{ lab.lab_id }}" style="display:none;">
+
+                        <h5 class="mb-3">{{ lab.lab_name }}</h5>
+
+                        {% if lab.dates %}
+
+                        <div class="table-responsive">
+                            <table class="table table-bordered text-center align-middle">
+                                <thead>
+                                    <tr>
+                                        {% for date in lab.dates %}
+                                        <th>{{ date }}</th>
+                                        {% endfor %}
+                                        <th>Attendance %</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        {% for date in lab.dates %}
+                                        <td>
+                                            {% if lab.status_map|get_item:date == "present" %}
+                                            ✔
+                                            {% else %}
+                                            ✘
+                                            {% endif %}
+                                        </td>
+                                        {% endfor %}
+                                        <td><strong>{{ lab.percentage }}%</strong></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {% else %}
+                        <p>No attendance records available.</p>
+                        {% endif %}
+
+                    </div>
+                    {% endfor %}
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+
+            // ──────── Attendance Modal ────────
+            function showSection(selectEl, sectionClass) {
+                const selectedValue = selectEl.value;
+                document.querySelectorAll('.' + sectionClass).forEach(el => {
+                    el.style.display = 'none';
+                });
+                if (selectedValue) {
+                    const target = document.getElementById(selectedValue);
+                    if (target) target.style.display = 'block';
+                }
+            }
+
+            const attendanceSelect = document.getElementById('attendanceSelect');
+            if (attendanceSelect) {
+                document.getElementById('attendanceModal')?.addEventListener('show.bs.modal', function () {
+                    if (attendanceSelect.options.length > 0) {
+                        attendanceSelect.selectedIndex = 0;
+                        showSection(attendanceSelect, 'attendance-section');
+                    }
+                });
+                attendanceSelect.addEventListener('change', function () {
+                    showSection(this, 'attendance-section');
+                });
+            }
+
+            // ──────── Marks Modal ────────
+            const labSelect = document.getElementById('labSelect');
+            if (labSelect) {
+                document.getElementById('marksModal')?.addEventListener('show.bs.modal', function () {
+                    if (labSelect.options.length > 0) {
+                        labSelect.selectedIndex = 0;
+                        const firstVal = labSelect.value;
+                        document.querySelectorAll('.lab-section').forEach(el => el.style.display = 'none');
+                        if (firstVal) {
+                            const t = document.getElementById('lab-' + firstVal);
+                            if (t) t.style.display = 'block';
+                        }
+                    }
+                });
+                labSelect.addEventListener('change', function () {
+                    document.querySelectorAll('.lab-section').forEach(el => el.style.display = 'none');
+                    const target = document.getElementById('lab-' + this.value);
+                    if (target) target.style.display = 'block';
+                });
+            }
+
+            // ──────── History Modal ────────
+            const historySelect = document.getElementById('historySelect');
+            if (historySelect) {
+                document.getElementById('historyModal')?.addEventListener('show.bs.modal', function () {
+                    if (historySelect.options.length > 0) {
+                        historySelect.selectedIndex = 0;
+                        document.querySelectorAll('.history-section').forEach(el => el.style.display = 'none');
+                        const firstId = historySelect.value;
+                        if (firstId) {
+                            const t = document.getElementById(firstId);
+                            if (t) t.style.display = 'block';
+                        }
+                    }
+                });
+                historySelect.addEventListener('change', function () {
+                    document.querySelectorAll('.history-section').forEach(el => el.style.display = 'none');
+                    const target = document.getElementById(this.value);
+                    if (target) target.style.display = 'block';
+                });
+            }
+
+        }); // end DOMContentLoaded
+    </script>
+
+    <!-- Marks -->
+    <div class="modal fade" id="marksModal">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5>Marks Details</h5>
+                </div>
+
+                <div class="modal-body">
+
+                    <!-- Dropdown -->
+                    <select id="labSelect" class="form-select mb-4">
+                        {% for lab in marks_data %}
+                        <option value="{{ lab.lab_id }}">
+                            {{ lab.lab_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+
+                    <button id="downloadBtn" class="btn mb-3">
+                        <i class="bi bi-file-earmark-spreadsheet me-2"></i>
+                        Download Excel
+                    </button>
+
+                    <!-- Lab Sections -->
+                    {% for lab in marks_data %}
+                    <div class="lab-section" id="lab-{{ lab.lab_id }}" style="display:none;">
+
+                        <h5>{{ lab.lab_name }}</h5>
+
+                        <div class="table-responsive">
+                            <table class="table table-bordered text-center">
+                                <thead>
+                                    <tr>
+                                        <th>Exp No</th>
+                                        <th>Experiment (5 M)</th>
+                                        <th>Write-up (5 M)</th>
+                                        <th>Viva (5 M)</th>
+                                        <th>Total (15 M)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for record in lab.records %}
+                                    <tr>
+                                        <td>{{ record.exp_number }}</td>
+                                        <td>{{ record.exp_marks }}</td>
+                                        <td>{{ record.writeup }}</td>
+                                        <td>{{ record.viva }}</td>
+                                        <td>{{ record.total }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <p><strong>Total:</strong> {{ lab.grand_total }}</p>
+                        <p><strong>Average:</strong> {{ lab.average }}</p>
+                        <p><strong>Percentage:</strong> {{ lab.percentage }}%</p>
+
+                    </div>
+                    {% endfor %}
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- History -->
+
+    <div class="modal fade" id="historyModal">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5>Submission History</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body">
+
+                    <!-- Dropdown -->
+                    <select id="historySelect" class="form-select mb-4">
+                        {% for lab in history_data %}
+                        <option value="history-{{ lab.lab_id }}">
+                            {{ lab.lab_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+
+                    {% for lab in history_data %}
+                    <div class="history-section" id="history-{{ lab.lab_id }}" style="display:none;">
+
+                        <h5 class="mb-4">{{ lab.lab_name }}</h5>
+
+                        {% if lab.submissions %}
+
+                        <div class="row">
+                            {% for submission in lab.submissions %}
+                            <div class="col-md-6 mb-4">
+
+                                <div class="card shadow-sm p-3">
+                                    <!-- <h6>
+                     {{ submission.experiment.name }}
+                  </h6> -->
+
+                                    <h6>
+                                        {% if submission.experiment_name %}
+                                        {{ submission.experiment_name }}
+                                        {% elif submission.experiment %}
+                                        Exp {{ submission.experiment.number }} - {{ submission.experiment.title }}
+                                        {% else %}
+                                        Unknown Experiment
+                                        {% endif %}
+                                    </h6>
+
+                                    <!-- Status Badge -->
+                                    {% if submission.status == "evaluated" %}
+                                    <span class="badge bg-success mb-2">Evaluated</span>
+                                    {% else %}
+                                    <span class="badge bg-warning text-dark mb-2">Pending</span>
+                                    {% endif %}
+
+
+                                    <!-- Date -->
+                                    <p class="small text-muted">
+                                        Submitted on {{ submission.submitted_at|date:"d M Y" }}
+                                    </p>
+
+                                    <!-- Screenshots -->
+                                    <div class="row">
+                                        <div class="col-6">
+                                            {% if submission.code_screenshot %}
+                                            <img src="{{ submission.code_screenshot.url }}" class="img-fluid rounded">
+                                            {% endif %}
+
+                                            <p class="small text-center mt-1">Code</p>
+                                        </div>
+
+                                        <div class="col-6">
+                                            {% if submission.output_screenshot %}
+                                            <img src="{{ submission.output_screenshot.url }}" class="img-fluid rounded">
+                                            {% endif %}
+                                            <p class="small text-center mt-1">Output</p>
+                                        </div>
+                                    </div>
+                                    {% if submission.evaluation %}
+                                    <div class="mt-3 p-2 bg-light rounded">
+
+                                        <p class="mb-1">
+                                            <strong>Marks:</strong>
+                                            Viva: {{ submission.evaluation.viva_marks }},
+                                            Exp: {{ submission.evaluation.experiment_marks }},
+                                            Write-up: {{ submission.evaluation.writeup_marks }}
+                                        </p>
+
+                                        {% if submission.evaluation.comments %}
+                                        <p class="mb-0">
+                                            <strong>Professor Comments:</strong>
+                                            {{ submission.evaluation.comments }}
+                                        </p>
+                                        {% endif %}
+
+                                    </div>
+                                    {% endif %}
+
+
+                                    <!-- Delete Button -->
+                                    {% if submission.status == "pending" %}
+                                    <div class="text-end mt-3">
+                                        <a href="{% url 'delete_submission' submission.id %}"
+                                            class="btn btn-sm btn-danger">
+                                            Delete
+                                        </a>
+                                    </div>
+                                    {% endif %}
+
+                                </div>
+
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        {% else %}
+                        <p>No submissions for this lab.</p>
+                        {% endif %}
+
+                    </div>
+                    {% endfor %}
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Profile -->
+    <div class="modal fade" id="editProfileModal">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+
+                <div class="modal-header">
+                    <h5>Edit Profile</h5>
+                </div>
+
+                <div class="modal-body">
+
+                    <form method="POST" action="{% url 'update_profile' %}" enctype="multipart/form-data">
+                        {% csrf_token %}
+
+                        <div class="text-center mb-3">
+
+                            <img id="profilePreview"
+                                src="{% if student.profile_pic %}{{ student.profile_pic.url }}{% else %}https://ui-avatars.com/api/?name={{ student.user.username }}{% endif %}"
+                                class="rounded-circle" width="120" height="120">
+
+                        </div>
+
+                        <div class="mb-3">
+                            <label>Upload Profile Picture</label>
+                            <input type="file" name="profile_pic" class="form-control" id="profileInput">
+                        </div>
+
+                        <p><strong>Username:</strong> {{ student.user.username }}</p>
+                        <p><strong>PRN:</strong> {{ student.prn }}</p>
+                        <p><strong>Division:</strong> {{ student.division }}</p>
+
+                        <div class="mb-3">
+                            <label>New Password</label>
+                            <input type="password" name="new_password" class="form-control">
+                        </div>
+
+                        <div class="mb-3">
+                            <label>Confirm Password</label>
+                            <input type="password" name="confirm_password" class="form-control">
+                        </div>
+
+                        <button class="btn w-100">Update Profile</button>
+
+                    </form>
+
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- View Labs Modal -->
+    <div class="modal fade" id="viewLabsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-book-half me-2"></i>Assigned Labs &amp; Materials</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Select Lab</label>
+                        <select id="studentViewLabSelect" class="form-select">
+                            <option value="">-- Select Lab --</option>
+                            {% for lab in labs %}
+                            <option value="{{ lab.id }}"
+                                data-syllabus="{% if lab.syllabus %}{{ lab.syllabus.url }}{% endif %}"
+                                data-manual="{% if lab.manual %}{{ lab.manual.url }}{% endif %}"
+                                data-professor="{{ lab.professor.name }}">
+                                {{ lab.name }}
+                            </option>
+                            {% empty %}
+                            <option disabled>No labs assigned</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div id="labMaterialsSection" style="display: none;">
+                        <div class="alert alert-info py-2 d-flex align-items-center mb-3 mt-3">
+                            <i class="bi bi-person-workspace fs-4 me-3"></i>
+                            <div>
+                                <small class="text-uppercase fw-bold text-muted" style="font-size: 0.75rem;">Assigned
+                                    Professor</small>
+                                <div id="labProfessorName" class="fw-bold fs-5 text-dark"></div>
+                            </div>
+                        </div>
+
+                        <h6 class="border-bottom pb-2 mb-3 mt-4">Lab Materials</h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="card h-100 bg-light border-0 shadow-sm">
+                                    <div class="card-body text-center">
+                                        <i class="bi bi-file-earmark-pdf text-danger fs-1 mb-2"></i>
+                                        <h6 class="card-title">Syllabus</h6>
+                                        <div id="syllabusLinkContainer">
+                                            <!-- Link injected via JS -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card h-100 bg-light border-0 shadow-sm">
+                                    <div class="card-body text-center">
+                                        <i class="bi bi-journal-text text-primary fs-1 mb-2"></i>
+                                        <h6 class="card-title">Lab Manual</h6>
+                                        <div id="manualLinkContainer">
+                                            <!-- Link injected via JS -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // View Labs Modal – show syllabus / manual on lab select
+        document.getElementById('studentViewLabSelect')?.addEventListener('change', function () {
+            const selected = this.options[this.selectedIndex];
+            const syllabusUrl = selected.dataset.syllabus;
+            const manualUrl = selected.dataset.manual;
+            const professorName = selected.dataset.professor || "Not Assigned";
+            const materialsSection = document.getElementById('labMaterialsSection');
+
+            if (!this.value) {
+                materialsSection.style.display = 'none';
+                return;
+            }
+            materialsSection.style.display = 'block';
+
+            document.getElementById('labProfessorName').textContent = professorName;
+
+            const syllabusContainer = document.getElementById('syllabusLinkContainer');
+            const manualContainer = document.getElementById('manualLinkContainer');
+
+            if (syllabusUrl) {
+                syllabusContainer.innerHTML = `<a href="${syllabusUrl}" target="_blank" class="btn btn-outline-danger btn-sm mt-2"><i class="bi bi-download me-1"></i>Download Syllabus</a>`;
+            } else {
+                syllabusContainer.innerHTML = `<p class="text-muted small mt-2">Not uploaded yet</p>`;
+            }
+
+            if (manualUrl) {
+                manualContainer.innerHTML = `<a href="${manualUrl}" target="_blank" class="btn btn-outline-primary btn-sm mt-2"><i class="bi bi-download me-1"></i>Download Manual</a>`;
+            } else {
+                manualContainer.innerHTML = `<p class="text-muted small mt-2">Not uploaded yet</p>`;
+            }
+        });
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{% static 'js/student_dashboard.js' %}"></script>
+    <script src="https://meet.jit.si/external_api.js"></script>
+
+    <script>
+        let currentStudentJitsiApi = null;
+
+        function startCall(roomName) {
+
+            const jitsiContainer = document.getElementById("jitsi-container");
+            jitsiContainer.style.display = "block";
+
+            // Clean up any old instances
+            if (currentStudentJitsiApi) {
+                currentStudentJitsiApi.dispose();
+                jitsiContainer.innerHTML = '';
+            }
+
+            const domain = "meet.jit.si";
+
+            const options = {
+                roomName: roomName,
+                width: "100%",
+                height: 500,
+                parentNode: jitsiContainer,
+                userInfo: {
+                    displayName: "{{ student.user.get_full_name|default:student.user.username }}"
+                },
+                configOverwrite: {
+                    startWithAudioMuted: false,
+                    startWithVideoMuted: false
+                },
+                interfaceConfigOverwrite: {
+                    SHOW_JITSI_WATERMARK: false
+                }
+            };
+
+            currentStudentJitsiApi = new JitsiMeetExternalAPI(domain, options);
+
+            // Listen for the Student hanging up
+            currentStudentJitsiApi.addListener('videoConferenceLeft', () => {
+                console.log("DEBUG: Student hung up the Viva Call.");
+
+                // Set lock to prevent poll from resurrecting banner immediately
+                window.isCallClosing = true;
+
+                // Hide container and incoming call box
+                jitsiContainer.style.display = "none";
+                jitsiContainer.innerHTML = '';
+
+                const callAlertEl = document.getElementById("incoming-call-box");
+                if (callAlertEl) callAlertEl.style.display = "none";
+
+                if (currentStudentJitsiApi) {
+                    currentStudentJitsiApi.dispose();
+                    currentStudentJitsiApi = null;
+                }
+
+                // Release the lock after a safe buffer (e.g. 6 seconds) 
+                // to allow the professor time to receive the disconnect and close their modal.
+                setTimeout(() => {
+                    window.isCallClosing = false;
+                }, 6000);
+            });
+        }
+        document.getElementById("profileInput").addEventListener("change", function (e) {
+
+            const file = e.target.files[0];
+            const preview = document.getElementById("profilePreview");
+
+            if (file) {
+                preview.src = URL.createObjectURL(file);
+            }
+
+        });
+
+        document.addEventListener("DOMContentLoaded", function () {
+
+            const select = document.getElementById("labSelect");
+            const downloadBtn = document.getElementById("downloadBtn");
+
+            function updateView() {
+
+                const labId = select.value;
+
+                // Hide all lab sections
+                document.querySelectorAll(".lab-section").forEach(section => {
+                    section.style.display = "none";
+                });
+
+                // Show selected lab
+                const selected = document.getElementById("lab-" + labId);
+                if (selected) {
+                    selected.style.display = "block";
+                }
+
+                // Update download link
+                downloadBtn.onclick = function () {
+                    window.location.href = "/student/export-marks-excel/" + labId + "/";
+                };
+
+            }
+
+            // Run when page loads
+            updateView();
+
+            // Run when dropdown changes
+            select.addEventListener("change", updateView);
+
+        });
+
+
+        // run when dropdown changes
+        select.addEventListener("change", updateMarksView);
+        document.addEventListener("DOMContentLoaded", function () {
+
+            const select = document.getElementById("attendanceSelect");
+            const sections = document.querySelectorAll(".attendance-section");
+
+            function showSelectedAttendance() {
+                sections.forEach(section => section.style.display = "none");
+
+                const selected = document.getElementById(select.value);
+                if (selected) {
+                    selected.style.display = "block";
+                }
+            }
+
+            if (select) {
+                select.addEventListener("change", showSelectedAttendance);
+
+                // Show first lab by default
+                if (select.options.length > 0) {
+                    select.selectedIndex = 0;
+                    showSelectedAttendance();
+                }
+            }
+
+        });
+        document.addEventListener("DOMContentLoaded", function () {
+
+            const select = document.getElementById("historySelect");
+            const sections = document.querySelectorAll(".history-section");
+
+            function showSelectedHistory() {
+                sections.forEach(section => section.style.display = "none");
+
+                const selected = document.getElementById(select.value);
+                if (selected) {
+                    selected.style.display = "block";
+                }
+            }
+
+            if (select) {
+                select.addEventListener("change", showSelectedHistory);
+
+                if (select.options.length > 0) {
+                    select.selectedIndex = 0;
+                    showSelectedHistory();
+                }
+            }
+
+        });
+        document.addEventListener("DOMContentLoaded", function () {
+
+            const select = document.getElementById("historySelect");
+            const sections = document.querySelectorAll(".history-section");
+
+            function showSelectedHistory() {
+                sections.forEach(section => section.style.display = "none");
+
+                const selected = document.getElementById(select.value);
+                if (selected) {
+                    selected.style.display = "block";
+                }
+            }
+
+            if (select) {
+                select.addEventListener("change", showSelectedHistory);
+
+                if (select.options.length > 0) {
+                    select.selectedIndex = 0;
+                    showSelectedHistory();
+                }
+            }
+
+        });
+        // document.getElementById("downloadBtn").onclick = function() {
+
+        //     let labId = document.getElementById("labSelect").value;
+
+        //     window.location.href = "/export-marks/" + labId + "/";
+        // };
+
+
+        // document.addEventListener("DOMContentLoaded", function(){
+
+        // const select = document.getElementById("courseSelect");
+
+        // if(!select) return;
+
+        // select.addEventListener("change", function(){
+
+        // const labId = this.value;
+
+        // fetch("/lab-details/" + labId + "/")
+
+        // .then(response => response.json())
+
+        // .then(data => {
+
+        // document.getElementById("courseDetails").style.display = "block";
+
+        // const syllabus = document.getElementById("syllabusLink");
+        // const manual = document.getElementById("manualLink");
+        // const expList = document.getElementById("experimentList");
+
+        // expList.innerHTML = "";
+
+        // /* syllabus */
+
+        // if(data.syllabus){
+        // syllabus.href = data.syllabus;
+        // syllabus.innerText = "Download";
+        // }else{
+        // syllabus.removeAttribute("href");
+        // syllabus.innerText = "Not uploaded yet";
+        // }
+
+        // /* manual */
+
+        // if(data.manual){
+        // manual.href = data.manual;
+        // manual.innerText = "Download";
+        // }else{
+        // manual.removeAttribute("href");
+        // manual.innerText = "Not uploaded yet";
+        // }
+
+        // /* experiments */
+
+        // if(data.experiments.length === 0){
+
+        // let li = document.createElement("li");
+        // li.innerText = "Experiments not added yet";
+        // expList.appendChild(li);
+
+        // }else{
+
+        // data.experiments.forEach(exp => {
+
+        // let li = document.createElement("li");
+        // li.innerText = "Exp " + exp.number + " - " + exp.name;
+        // expList.appendChild(li);
+
+        // });
+
+        // }
+
+        // })
+
+        // .catch(err => {
+        // console.log("Course fetch error:", err);
+        // });
+
+        // });
+
+        // });
+        document.getElementById("labSelectUpload").addEventListener("change", function () {
+
+            const labId = this.value;
+
+            fetch("/student/lab-details/" + labId + "/")
+                .then(response => response.json())
+                .then(data => {
+
+                    const expSelect = document.getElementById("experimentSelect");
+                    expSelect.innerHTML = "";
+
+                    data.experiments.forEach(exp => {
+
+                        const option = document.createElement("option");
+
+                        option.value = exp.number;
+                        option.text = "Exp " + exp.number + " - " + exp.title;
+
+                        expSelect.appendChild(option);
+
+                    });
+
+                });
+
+        });
+
+
+    </script>
+    <footer class="global-footer footer-student">
+        <div class="footer-content">
+            <div class="footer-developed-by">DEVELOPED BY : SUN NEXUS SOLUTIONS</div>
+            <div class="footer-university">SANDIP UNIVERSITY</div>
+        </div>
+    </footer>
+</body>
+
+</html>

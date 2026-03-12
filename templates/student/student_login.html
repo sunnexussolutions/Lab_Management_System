@@ -1,0 +1,193 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Student Portal - Login & Registration</title>
+
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
+    integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous" />
+
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+
+  <!-- Google Font: Poppins -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="{% static 'css/student_login.css' %}" />
+  <link rel="stylesheet" href="{% static 'css/footer.css' %}" />
+</head>
+
+<body>
+
+  <div class="container d-flex justify-content-center align-items-center min-vh-100">
+    <div class="card auth-card shadow-lg fade-in">
+      <div class="card-body p-5">
+
+        <!-- Django Messages Block (shows success/error) -->
+        {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show mb-4">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        <!-- Tabs -->
+        <ul class="nav nav-pills nav-justified mb-4">
+
+          <li class="nav-item">
+            <button class="nav-link {% if active_tab == 'login' %}active{% endif %}" data-bs-toggle="pill"
+              data-bs-target="#signin" type="button">
+              Sign In
+            </button>
+          </li>
+
+          <li class="nav-item">
+            <button class="nav-link {% if active_tab == 'register' %}active{% endif %}" data-bs-toggle="pill"
+              data-bs-target="#signup" type="button">
+              Register
+            </button>
+          </li>
+
+        </ul>
+
+        <div class="tab-content">
+
+          <!-- SIGN IN -->
+          <div class="tab-pane fade {% if active_tab == 'login' %}show active{% endif %}" id="signin">
+
+            <h3 class="text-center mb-4 fw-semibold">Student Sign In</h3>
+
+            <form method="post" action="{% url 'student_login' %}">
+              {% csrf_token %}
+
+              <div class="mb-4">
+                <label class="form-label fw-semibold">Username or PRN</label>
+                <input type="text" name="username" class="form-control" placeholder="Enter your ERP username or PRN"
+                  required>
+              </div>
+
+              <div class="mb-4">
+                <label class="form-label fw-semibold">Password</label>
+                <div class="input-group">
+                  <input type="password" name="password" class="form-control" placeholder="Enter password" required>
+                  <span class="input-group-text toggle-password">
+                    <i class="bi bi-eye-slash"></i>
+                  </span>
+                </div>
+              </div>
+
+              <button type="submit" name="student_login_submit" class="btn  w-100 py-2 fw-semibold">
+                Sign In
+              </button>
+            </form>
+
+          </div>
+
+          <!-- REGISTER -->
+          <div class="tab-pane fade {% if active_tab == 'register' %}show active{% endif %}" id="signup">
+
+            <h3 class="text-center mb-4 fw-semibold">Student Registration</h3>
+
+            <form method="post" action="{% url 'student_login' %}" id="signupForm">
+              {% csrf_token %}
+
+              <div class="mb-3">
+                <p class="text">
+                  The username should be as per "ERP". This ensures your submissions and marks are correctly linked to
+                  your account.
+                  <br>
+                  <label class="form-label fw-semibold">Username</label>
+                  <input type="text" name="username" class="form-control" required>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label fw-semibold">PRN</label>
+                <input type="text" name="prn" class="form-control" required>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Password</label>
+                <div class="input-group">
+                  <input type="password" name="password1" id="signupPassword" class="form-control" required>
+                  <span class="input-group-text toggle-password">
+                    <i class="bi bi-eye-slash"></i>
+                  </span>
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Confirm Password</label>
+                <div class="input-group">
+                  <input type="password" name="password2" id="confirmPassword" class="form-control" required>
+                  <span class="input-group-text toggle-password">
+                    <i class="bi bi-eye-slash"></i>
+                  </span>
+                </div>
+                <div id="passwordMatchMessage"></div>
+              </div>
+
+              <!-- UNIQUE IDS -->
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Division</label>
+                <select class="form-select" id="registerDivision" name="division" required>
+                  <option value="">Choose division...</option>
+                  <option value="J1">J1</option>
+                  <option value="J2">J2</option>
+                  <option value="K1">J3</option>
+                  <option value="K2">K2</option>
+                  <option value="L1">L1</option>
+                </select>
+              </div>
+              <!-- 
+      <div class="mb-3">
+        <label class="form-label">Lab</label>
+        <select class="form-select" id="registerLab"
+                name="lab" required disabled>
+          <option value="">First select division...</option>
+        </select>
+      </div>
+
+      <div class="mb-4">
+        <label class="form-label">Professor</label>
+        <input type="text"
+               id="registerProfessor"
+               class="form-control"
+               name="professor_name"
+               readonly>
+      </div> -->
+
+              <button type="submit" name="student_register_submit" class="btn  w-100">
+                Register
+              </button>
+
+            </form>
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap 5 JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+    integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+    crossorigin="anonymous"></script>
+
+  <script src="{% static 'js/student_login.js' %}"></script>
+
+  <footer class="global-footer">
+    <div class="footer-content">
+      <div class="footer-developed-by">DEVELOPED BY : SUN NEXUS SOLUTIONS</div>
+      <div class="footer-university">SANDIP UNIVERSITY</div>
+    </div>
+  </footer>
+</body>
+
+</html>

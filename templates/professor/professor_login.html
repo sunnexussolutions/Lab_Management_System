@@ -1,0 +1,215 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Portal - Login & Signup</title>
+
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
+    integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous" />
+
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+
+  <!-- Google Font: Poppins (professional & modern) -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="{% static 'css/professor_login.css'%}" />
+  <link rel="stylesheet" href="{% static 'css/footer.css' %}" />
+</head>
+
+<body>
+
+  <div class="container d-flex justify-content-center align-items-center min-vh-100">
+    <div class="card auth-card shadow-lg fade-in">
+      <div class="card-body p-5">
+        {% if messages %}
+        <div class="mb-4">
+          {% for message in messages %}
+          <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            <strong>{% if message.tags == 'error' %}Error:{% elif message.tags == 'success' %}Success:{% endif %}</strong> {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+
+
+        <!-- Tabs -->
+        <!-- Tabs -->
+        <ul class="nav nav-pills nav-justified mb-4" id="authTabs" role="tablist">
+
+          <!-- Sign In Tab -->
+          <li class="nav-item" role="presentation">
+            <button class="nav-link {% if active_tab == 'login' %}active{% endif %}" id="signin-tab"
+              data-bs-toggle="pill" data-bs-target="#signin" type="button" role="tab" aria-controls="signin"
+              aria-selected="{% if active_tab == 'login' %}true{% else %}false{% endif %}">
+              Sign In
+            </button>
+          </li>
+
+          <!-- Sign Up Tab -->
+          <li class="nav-item" role="presentation">
+            <button class="nav-link {% if active_tab == 'register' %}active{% endif %}" id="signup-tab"
+              data-bs-toggle="pill" data-bs-target="#signup" type="button" role="tab" aria-controls="signup"
+              aria-selected="{% if active_tab == 'register' %}true{% else %}false{% endif %}">
+              Sign Up
+            </button>
+          </li>
+
+        </ul>
+
+        <div class="tab-content">
+          <!-- Sign In Form -->
+          <div class="tab-pane fade {% if active_tab == 'login' %}show active{% endif %}" id="signin" role="tabpanel"
+            aria-labelledby="signin-tab">
+            <h3 class="text-center mb-4 fw-semibold">Admin Sign In</h3>
+
+            <!-- {% if messages %}
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      {% endfor %}
+    {% endif %} -->
+
+            <form method="post" action="{% url 'professor_auth' %}" id="signinForm">
+              {% csrf_token %}
+              <div class="mb-3">
+                <label for="username" class="form-label">Username</label>
+                <input type="text" name="username" class="form-control" required>
+              </div>
+
+              <div class="mb-3 position-relative">
+                <label for="password" class="form-label">Password</label>
+                <div class="input-group">
+                  <input type="password" name="password" class="form-control" required>
+                  <span class="input-group-text toggle-password" id="toggleSignin">
+                    <i class="bi bi-eye-slash"></i>
+                  </span>
+                </div>
+              </div>
+              <a href="{% url 'password_reset' %}">
+                Forgot Password?
+              </a>
+
+              <button type="submit" name="login_submit" class="btn w-100">Sign In</button>
+            </form>
+          </div>
+
+          <!-- Sign Up Form -->
+          <div class="tab-pane fade {% if active_tab == 'register' %}show active{% endif %}" id="signup" role="tabpanel"
+            aria-labelledby="signup-tab">
+            <h3 class="text-center mb-4 fw-semibold">Admin Sign Up</h3>
+
+            <!-- {% if messages %}
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      {% endfor %}
+    {% endif %} -->
+
+            <form method="post" action="{% url 'professor_auth' %}" id="signupForm">
+              {% csrf_token %}
+
+              <div class="mb-3">
+                <label for="username" class="form-label">Username</label>
+                <input type="text" name="username" class="form-control" required>
+              </div>
+
+              <div class="mb-3">
+                <label for="email" class="form-label">Email</label>
+                <input type="email" name="email" class="form-control" placeholder="Enter your email">
+              </div>
+
+              <div class="mb-3 position-relative">
+                <label for="password1" class="form-label">Password</label>
+                <div class="input-group">
+                  <input type="password" name="password1" id="signupPassword" class="form-control" required>
+                  <span class="input-group-text toggle-password" id="toggleSignup">
+                    <i class="bi bi-eye-slash"></i>
+                  </span>
+                </div>
+              </div>
+
+              <div class="mb-4 position-relative">
+                <label for="password2" class="form-label">Confirm Password</label>
+                <div class="input-group">
+                  <input type="password" name="password2" id="confirmPassword" class="form-control" required>
+                  <span class="input-group-text toggle-password" id="toggleConfirm">
+                    <i class="bi bi-eye-slash"></i>
+                  </span>
+                </div>
+                <div id="passwordMatchMessage" class="password-match-message"></div>
+              </div>
+
+              <!-- Lab dropdown (changed from text) -->
+              <!-- <div class="mb-3">
+  <label>Select Lab You Teach</label>
+  <select name="lab" class="form-select" required>
+    {% for lab in labs %}
+      <option value="{{ lab.id }}">{{ lab.name }}</option>
+    {% endfor %}
+  </select>
+</div> -->
+
+              <!-- Your divisions multi-select -->
+              <div class="mb-4">
+                <label class="form-label">Divisions You Teach (multiple allowed)</label>
+                <div class="dropdown">
+                  <button class="btn btn-outline-secondary dropdown-toggle w-100 text-start" type="button"
+                    id="divisionDropdown" data-bs-toggle="dropdown">
+                    Select divisions...
+                  </button>
+                  <ul class="dropdown-menu w-100" aria-labelledby="divisionDropdown">
+                    <li><label class="dropdown-item"><input type="checkbox" name="divisions" value="A1"> Division
+                        A1</label></li>
+                    <li><label class="dropdown-item"><input type="checkbox" name="divisions" value="B2"> Division
+                        B2</label></li>
+                    <li><label class="dropdown-item"><input type="checkbox" name="divisions" value="J1"> Division
+                        J1</label></li>
+                    <li><label class="dropdown-item"><input type="checkbox" name="divisions" value="J2"> Division
+                        J2</label></li>
+                    <li><label class="dropdown-item"><input type="checkbox" name="divisions" value="J3"> Division
+                        J3</label></li>
+                  </ul>
+                </div>
+              </div>
+
+              <button type="submit" name="register_submit" class="btn w-100">Create Account</button>
+            </form>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+  </div>
+
+  </div>
+  </div>
+  </div>
+
+  <!-- Bootstrap 5 JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+    integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+    crossorigin="anonymous"></script>
+  {% load static %}
+  <script src="{% static 'js/professor_login.js' %}"></script>
+
+  <footer class="global-footer">
+    <div class="footer-content">
+      <div class="footer-developed-by">DEVELOPED BY : SUN NEXUS SOLUTIONS</div>
+      <div class="footer-university">SANDIP UNIVERSITY</div>
+    </div>
+  </footer>
+</body>
+
+</html>

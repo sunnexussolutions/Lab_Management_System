@@ -1,0 +1,615 @@
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap");
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Poppins", sans-serif;
+  background-color: #f6f3ed;
+  min-height: 100vh;
+}
+
+.bg-gradient-header {
+  background: linear-gradient(90deg, #728156, #88976c, #98a77c, #b6c99b, #cfe1b9, #e7f5dc);
+}
+
+.edit-profile-bg {
+  background-color: #f6f3ed;
+}
+
+.modal-header {
+  background-color: #313851;
+  color: white;
+}
+
+.profile-icon {
+  width: 48px;
+  height: 48px;
+  cursor: pointer;
+  transition: transform 0.3s;
+}
+
+.profile-icon:hover {
+  transform: scale(1.1);
+}
+
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 300px;
+  height: 100%;
+  background: #c2cbd3;
+  transition: transform 0.4s ease;
+  z-index: 1050;
+  overflow-y: auto;
+  transform: translateX(-100%);
+}
+
+.sidebar.show {
+  transform: translateX(0);
+}
+
+.sidebar a {
+  display: block;
+  padding: 14px 20px;
+  color: black;
+  text-decoration: none;
+  font-size: 1.05rem;
+  transition: all 0.3s;
+}
+
+.sidebar a:hover {
+  background: #313851;
+  color: white;
+  padding-left: 28px;
+}
+
+main {
+  transition: margin-left 0.4s ease;
+}
+
+@media (min-width: 992px) {
+  main.shifted {
+    margin-left: 300px;
+  }
+}
+
+.card {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.card-title {
+  display: flex;
+  font-size: 1.25rem;
+  font-weight: 600;
+  justify-content: center;
+  align-items: center;
+}
+
+.hover-lift {
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12) !important;
+}
+
+.list-group-item {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  transition: all 0.25s;
+}
+
+.list-group-item:hover {
+  background: #f1f5f9;
+  transform: translateX(6px);
+}
+
+.bg-gradient {
+  background: linear-gradient(135deg, #3d444f 0%, #3f374d 100%) !important;
+}
+
+.card-header {
+  border-bottom: none !important;
+}
+
+.list-group-item.student-row {
+  padding: 1.25rem 1.5rem;
+  transition: all 0.25s ease;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.student-row:hover {
+  background-color: #f8f9fa;
+  transform: translateX(6px);
+}
+
+.student-info {
+  flex: 1;
+}
+
+.student-info h6 {
+  margin: 0;
+  font-weight: 600;
+  color: #212529;
+}
+
+.student-info small {
+  color: #6c757d;
+  font-size: 0.9rem;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.btn {
+  background-color: #c2cbd3;
+  color: black;
+}
+
+.btn:hover {
+  background-color: #313851 !important;
+  color: white;
+}
+
+.card-header {
+  background-color: #313851;
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.btn-viva-call {
+  background-color: #456b59 !important;
+  border: none;
+  padding: 0.55rem 1.4rem;
+  font-weight: 500;
+  transition: all 0.25s;
+}
+
+.btn-viva-call:hover {
+  background-color: #157347 !important;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(25, 135, 84, 0.3);
+}
+
+.btn-viva-ignore {
+  background-color: #bb2d3b !important;
+  border: none;
+  padding: 0.55rem 1.4rem;
+  font-weight: 500;
+  transition: all 0.25s;
+}
+
+.btn-viva-ignore:hover {
+  background-color: #dc3545 !important;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+}
+
+@media (max-width: 576px) {
+  .action-buttons {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .btn-viva-call,
+  .btn-viva-ignore {
+    width: 100%;
+  }
+}
+
+@media (max-width: 992px) {
+  main.shifted {
+    margin-left: 0;
+  }
+
+  .sidebar {
+    width: 280px;
+  }
+}
+
+@media (max-width: 576px) {
+  .profile-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  h4 {
+    font-size: 1.4rem;
+  }
+}
+
+/* Make sure header content is centered properly */
+header .container-fluid {
+  position: relative;
+}
+
+/* Profile icon positioning - left aligned */
+.profile-icon {
+  width: 48px;
+  height: 48px;
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+.profile-icon:hover {
+  transform: scale(1.1);
+}
+
+/* Sidebar opens from left */
+.sidebar {
+  transform: translateX(-100%);
+  transition: transform 0.4s ease;
+}
+
+.sidebar.show {
+  transform: translateX(0);
+}
+
+.sidebar-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1040;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.4s ease;
+}
+
+.sidebar-overlay.show {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* When sidebar is open, main content shifts right */
+main.shifted {
+  margin-left: 300px;
+  transition: margin-left 0.4s ease;
+}
+
+/* Mobile adjustments */
+@media (max-width: 992px) {
+  main.shifted {
+    margin-left: 0;
+    /* don't push content on small screens */
+  }
+
+  .profile-icon {
+    width: 42px;
+    height: 42px;
+  }
+}
+
+/* Extra spacing & card title fix */
+.card-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Student row styles for Pending Viva */
+.student-row {
+  padding: 1rem 1.25rem;
+  transition: all 0.2s ease;
+}
+
+.student-row:hover {
+  background-color: #f8f9fa;
+}
+
+.student-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #e9ecef;
+  flex-shrink: 0;
+}
+
+.student-info {
+  min-width: 0;
+  flex: 1;
+}
+
+.student-info h6 {
+  margin: 0;
+  font-weight: 600;
+  font-size: 1.05rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.student-info small {
+  color: #6c757d;
+  font-size: 0.9rem;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.btn-action {
+  padding: 0.5rem 1rem;
+  font-size: 0.95rem;
+  border-radius: 0.5rem;
+  white-space: nowrap;
+}
+
+.btn-viva-call {
+  background-color: #456b59 !important;
+  border: none;
+}
+
+.btn-viva-call:hover {
+  background-color: #2e4a3d !important;
+}
+
+.btn-viva-ignore {
+  background-color: #bb2d3b !important;
+  border: none;
+}
+
+.btn-viva-ignore:hover {
+  background-color: #a12533 !important;
+}
+
+.btn-view-screenshots {
+  background-color: #0d6efd !important;
+  border: none;
+}
+
+.btn-view-screenshots:hover {
+  background-color: #0b5ed7 !important;
+}
+
+/* Mobile adjustments for Pending Viva */
+@media (max-width: 576px) {
+  .student-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .action-buttons {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .action-buttons .btn {
+    flex: 1;
+  }
+
+  .student-avatar {
+    width: 64px;
+    height: 64px;
+  }
+}
+
+@media (max-width: 400px) {
+  .action-buttons {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+}
+
+/* View Uploads Table Styles */
+.uploads-table .student-avatar {
+  width: 40px;
+  height: 40px;
+}
+
+.uploads-table .action-buttons {
+  gap: 0.4rem;
+}
+
+.uploads-table .btn-action {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 768px) {
+  .uploads-table {
+    font-size: 0.9rem;
+  }
+
+  .uploads-table .action-buttons {
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+
+  .uploads-table .btn-action {
+    width: 100%;
+  }
+}
+
+.sub-heading {
+  color: #6c757d;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* View Uploads - Per-row save button */
+.btn-save-upload {
+  background-color: #456b59 !important;
+  border: none;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.9rem;
+}
+
+.btn-save-upload:hover {
+  background-color: #2e4a3d !important;
+}
+
+.evaluate-checkbox {
+  transform: scale(1.2);
+}
+
+/* Make table more readable on mobile */
+@media (max-width: 768px) {
+
+  .table th,
+  .table td {
+    padding: 0.65rem;
+    font-size: 0.92rem;
+  }
+
+  .btn-save-upload {
+    width: 100%;
+    margin-top: 0.35rem;
+  }
+}
+
+/* View Uploads enhancements */
+.uploads-table .student-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #dee2e6;
+}
+
+.btn-save-file {
+  background-color: #198754 !important;
+  /* success green */
+  border: none;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.9rem;
+}
+
+.btn-save-file:hover {
+  background-color: #157347 !important;
+}
+
+.btn-view-screenshots-sm {
+  background-color: #0d6efd !important;
+  border: none;
+  padding: 0.4rem 0.85rem;
+  font-size: 0.88rem;
+}
+
+.btn-view-screenshots-sm:hover {
+  background-color: #0b5ed7 !important;
+}
+
+@media (max-width: 768px) {
+
+  .table th,
+  .table td {
+    padding: 0.6rem;
+    font-size: 0.9rem;
+  }
+
+  .btn-save-file,
+  .btn-view-screenshots-sm {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+  }
+}
+
+/* =============================================
+   OLIVE-GREEN THEME: Dropdowns, Selects, Modals
+   ============================================= */
+
+/* Form selects / dropdowns */
+.form-select {
+  background-color: #f6f3ed;
+  border: 1px solid #728156;
+  color: #313851;
+  /* Appearance override for WebKit/Brave */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+.form-select:focus {
+  border-color: #88976c;
+  box-shadow: 0 0 0 0.2rem rgba(114, 129, 86, 0.25);
+  background-color: #f6f3ed;
+  outline: 0;
+}
+
+/* Base option styling */
+.form-select option {
+  background-color: #f6f3ed;
+  color: #313851;
+  padding: 8px;
+}
+
+/* Force override browser's default blue hover on select options (Chromium/Brave hook) */
+.form-select option:checked,
+.form-select option:hover,
+.form-select:focus>option:checked {
+  background-color: #728156 !important;
+  color: white !important;
+  /* Specific override for Webkit browsers like Brave/Chrome */
+  box-shadow: 0 0 10px 100px #728156 inset !important;
+}
+
+/* Bootstrap dropdown menus */
+.dropdown-menu {
+  background-color: #f6f3ed;
+  border: 1px solid #728156;
+}
+
+.dropdown-item {
+  color: #313851;
+}
+
+.dropdown-item:hover,
+.dropdown-item:focus {
+  background-color: #728156;
+  color: white;
+}
+
+/* Nav pills (tabs in modals/pages) */
+.nav-pills .nav-link {
+  color: #728156;
+}
+
+.nav-pills .nav-link.active {
+  background-color: #728156;
+  color: white;
+}
+
+/* Modal header override */
+.modal-header {
+  background: linear-gradient(90deg, #728156, #88976c, #98a77c, #b6c99b);
+  color: white;
+}
+
+.modal-header .btn-close {
+  filter: invert(1);
+}
+
+/* Card headers */
+.card-header {
+  background: linear-gradient(90deg, #728156, #88976c, #b6c99b) !important;
+  color: white !important;
+}
+
+/* Sidebar link hover */
+.sidebar a:hover {
+  background: #728156;
+  color: white;
+}

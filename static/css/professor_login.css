@@ -1,0 +1,113 @@
+body {
+  font-family: 'Poppins', sans-serif;
+  background: linear-gradient(90deg, #728156, #b6c99b);
+  min-height: 100vh;
+}
+
+.auth-card {
+  max-width: 420px;
+  border: none;
+  border-radius: 16px;
+  overflow: hidden;
+  background: linear-gradient(to bottom, #728156, #88976c, #98a77c, #b6c998, #e7f5dc);
+}
+
+.nav-pills .nav-link {
+  border-radius: 10px;
+  font-weight: 500;
+  padding: 12px;
+  transition: all 0.3s;
+  color: #f8f8f8;
+}
+
+.nav-pills .nav-link.active {
+  background-color: #728156;
+  color: white;
+}
+
+.form-control,
+.form-select {
+  border-radius: 10px;
+  padding: 12px;
+  border: 1px solid #ced4da;
+  transition: border-color 0.3s;
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: #b6c99b;
+  box-shadow: 0 0 0 0.25rem rgba(114, 129, 86, 0.25);
+}
+
+.btn {
+  border-radius: 10px;
+  padding: 12px;
+  font-weight: 600;
+  background-color: #728156;
+  color: white;
+  border: none;
+  transition: transform 0.2s, box-shadow 0.2s, background-color 0.2s;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  background-color: #616e49;
+  color: white;
+  box-shadow: 0 4px 8px rgba(114, 129, 86, 0.3);
+}
+
+.toggle-password {
+  font-size: 1.2rem;
+  color: #6c757d;
+  right: 12px !important;
+}
+
+.dropdown-menu {
+  max-height: 280px;
+  overflow-y: auto;
+  background-color: #728156;
+  color: white;
+}
+
+.dropdown-item label {
+  width: 100%;
+  margin: 0;
+  cursor: pointer;
+}
+
+.fade-in {
+  animation: fadeIn 0.8s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 576px) {
+  .auth-card {
+    margin: 20px;
+  }
+}
+
+a {
+  color: #728156;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+a:hover {
+  color: #5c6845;
+  text-decoration: underline;
+}
+
+h3 {
+  color: white;
+}

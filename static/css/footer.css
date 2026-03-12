@@ -1,0 +1,80 @@
+.global-footer {
+    background: linear-gradient(135deg, #190019 0%, #2b124c 100%);
+    color: #fbe4d8;
+    padding: 1.25rem 1.5rem;
+    text-align: center;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    margin: 2rem auto 1.5rem;
+    width: 92%;
+    max-width: 1100px;
+    border-radius: 24px;
+    position: relative;
+    z-index: 10;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+}
+
+/* Student Dashboard Theme */
+.footer-student {
+    background: linear-gradient(135deg, #2b124c 0%, #854f6c 100%);
+    border-color: rgba(223, 182, 178, 0.3);
+}
+
+/* Professor Dashboard Theme */
+.footer-professor {
+    background: linear-gradient(135deg, #4b5d2e 0%, #728156 100%);
+    border-color: rgba(182, 201, 155, 0.3);
+}
+
+/* College Admin Dashboard Theme */
+.footer-college {
+    background: linear-gradient(135deg, #2c9ca3 0%, #3ebdc6 100%);
+    border-color: rgba(168, 234, 213, 0.3);
+}
+
+.footer-content {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.footer-developed-by {
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-size: 0.95rem;
+    margin-bottom: 0.5rem;
+    color: #dfb6b2;
+}
+
+.footer-student .footer-developed-by {
+    color: #fbe4d8;
+}
+
+.footer-professor .footer-developed-by {
+    color: #e7f5dc;
+}
+
+.footer-college .footer-developed-by {
+    color: #a8ead5;
+}
+
+.footer-university {
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    margin-top: 0.25rem;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.85rem;
+}
+
+@media (max-width: 768px) {
+    .global-footer {
+        width: 95%;
+        padding: 1rem;
+        margin-top: 1.5rem;
+    }
+}
+
+@media (max-width: 576px) {
+}
+.in-iframe .global-footer {
+    display: none;
+}
