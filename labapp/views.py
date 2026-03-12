@@ -333,7 +333,7 @@ def college_auth(request):
         # LOGIN
         if "login_submit" in request.POST:
 
-            username = request.POST.get("username")
+            username = request.POST.get("username", "").strip()
             password = request.POST.get("password")
 
             try:
@@ -341,6 +341,18 @@ def college_auth(request):
             except DatabaseError:
                 messages.error(request, "Database is not ready. Run migrations and verify DATABASE_URL.")
                 return redirect("college_auth")
+
+            # Username login is case-sensitive by default in Django.
+            # Try a case-insensitive username lookup for friendlier login behavior.
+            if user is None and username:
+                try:
+                    matched_user = User.objects.get(username__iexact=username)
+                    user = authenticate(request, username=matched_user.username, password=password)
+                except User.DoesNotExist:
+                    pass
+                except DatabaseError:
+                    messages.error(request, "Database is not ready. Run migrations and verify DATABASE_URL.")
+                    return redirect("college_auth")
 
             if user is not None:
                 try:
@@ -356,10 +368,15 @@ def college_auth(request):
         # REGISTER
         elif "register_submit" in request.POST:
 
-            college_name = request.POST.get("college_name")
-            username = request.POST.get("username")
+            college_name = request.POST.get("college_name", "").strip()
+            college_email = request.POST.get("college_email", "").strip()
+            username = request.POST.get("username", "").strip()
             password = request.POST.get("password")
             confirm_password = request.POST.get("confirm_password")
+
+            if not college_name or not college_email or not username:
+                messages.error(request, "College name, college email, and username are required.")
+                return redirect("college_auth")
 
             if password != confirm_password:
                 messages.error(request, "Passwords do not match")
@@ -373,15 +390,22 @@ def college_auth(request):
                     )
 
                     college = College.objects.create(
-                        name=college_name
+                        name=college_name,
+                        email=college_email
                     )
 
                     CollegeAdmin.objects.create(
                         user=user,
                         college=college
                     )
-            except IntegrityError:
-                messages.error(request, "Username already exists. Please choose another username.")
+            except IntegrityError as exc:
+                error_text = str(exc).lower()
+                if "username" in error_text:
+                    messages.error(request, "Username already exists. Please choose another username.")
+                elif "email" in error_text:
+                    messages.error(request, "College email already exists. Please use another email.")
+                else:
+                    messages.error(request, "Could not create account due to duplicate data.")
                 return redirect("college_auth")
             except DatabaseError:
                 messages.error(request, "Database is not ready. Run migrations and verify DATABASE_URL.")
