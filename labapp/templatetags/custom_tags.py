@@ -11,3 +11,21 @@ def get_item(dictionary, key):
     if isinstance(dictionary, dict):
         return dictionary.get(key)
     return None
+
+
+@register.filter
+def file_exists(field_file):
+    """
+    Return True only when a FileField/ImageField has a valid storage object
+    and the underlying file exists in storage.
+    """
+    try:
+        if not field_file:
+            return False
+        storage = getattr(field_file, 'storage', None)
+        name = getattr(field_file, 'name', '')
+        if not storage or not name:
+            return False
+        return storage.exists(name)
+    except Exception:
+        return False

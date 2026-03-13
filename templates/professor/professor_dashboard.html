@@ -1,4 +1,4 @@
-{% load static %}
+{% load static custom_tags %}
 <!DOCTYPE html>
 <html lang="en">
 
@@ -320,20 +320,28 @@
 
                 <!-- Thumbnails -->
                 <div class="d-flex align-items-center gap-2">
-                  {% if viva.code_screenshot %}
+                  {% if viva.code_screenshot and viva.code_screenshot|file_exists %}
                   <a href="{{ viva.code_screenshot.url }}" target="_blank" class="text-decoration-none">
                     <div class="border rounded overflow-hidden" style="width: 60px; height: 40px;">
                       <img src="{{ viva.code_screenshot.url }}" alt="Code" class="w-100 h-100 object-fit-cover" title="View Code Screenshot">
                     </div>
                   </a>
+                  {% else %}
+                  <div class="border rounded d-flex align-items-center justify-content-center text-muted" style="width: 60px; height: 40px;" title="Code screenshot missing">
+                    <i class="bi bi-image"></i>
+                  </div>
                   {% endif %}
                   
-                  {% if viva.output_screenshot %}
+                  {% if viva.output_screenshot and viva.output_screenshot|file_exists %}
                   <a href="{{ viva.output_screenshot.url }}" target="_blank" class="text-decoration-none">
                     <div class="border rounded overflow-hidden" style="width: 60px; height: 40px;">
                       <img src="{{ viva.output_screenshot.url }}" alt="Output" class="w-100 h-100 object-fit-cover" title="View Output Screenshot">
                     </div>
                   </a>
+                  {% else %}
+                  <div class="border rounded d-flex align-items-center justify-content-center text-muted" style="width: 60px; height: 40px;" title="Output screenshot missing">
+                    <i class="bi bi-image"></i>
+                  </div>
                   {% endif %}
                 </div>
 

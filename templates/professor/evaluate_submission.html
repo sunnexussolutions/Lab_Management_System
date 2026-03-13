@@ -1,4 +1,4 @@
-{% load static %}
+{% load static custom_tags %}
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -79,23 +79,27 @@
               <div class="row mb-4">
                 <div class="col-md-6">
                   <h5>Code Screenshot</h5>
-                  {% if submission.code_screenshot %}
-                    <img src="{{ submission.code_screenshot.url }}" alt="Code Screenshot" class="screenshot-container w-100">
+                  {% if submission.code_screenshot and submission.code_screenshot|file_exists %}
+                    <a href="{{ submission.code_screenshot.url }}" target="_blank">
+                      <img src="{{ submission.code_screenshot.url }}" alt="Code Screenshot" class="screenshot-container w-100">
+                    </a>
                   {% else %}
                     <div class="text-center p-4 bg-light rounded">
                       <i class="bi bi-image text-muted fs-1"></i>
-                      <p class="text-muted mt-2">No code screenshot uploaded</p>
+                      <p class="text-muted mt-2">Code screenshot missing or not uploaded</p>
                     </div>
                   {% endif %}
                 </div>
                 <div class="col-md-6">
                   <h5>Output Screenshot</h5>
-                  {% if submission.output_screenshot %}
-                    <img src="{{ submission.output_screenshot.url }}" alt="Output Screenshot" class="screenshot-container w-100">
+                  {% if submission.output_screenshot and submission.output_screenshot|file_exists %}
+                    <a href="{{ submission.output_screenshot.url }}" target="_blank">
+                      <img src="{{ submission.output_screenshot.url }}" alt="Output Screenshot" class="screenshot-container w-100">
+                    </a>
                   {% else %}
                     <div class="text-center p-4 bg-light rounded">
                       <i class="bi bi-image text-muted fs-1"></i>
-                      <p class="text-muted mt-2">No output screenshot uploaded</p>
+                      <p class="text-muted mt-2">Output screenshot missing or not uploaded</p>
                     </div>
                   {% endif %}
                 </div>
