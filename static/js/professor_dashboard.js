@@ -579,25 +579,36 @@ document.addEventListener("DOMContentLoaded", () => {
         "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value
       }
     })
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        alert(data.message);
-        checkUploadStatus(labSelect.value, divisionSelect.value);
-        fileInput.value = ""; // Clear file input
-        // Refresh page to update division dropdowns if a new one was added to professor's list
-        if (data.division_added) {
-          window.location.reload();
-        } else {
-          document.getElementById("uploadStudentExcelModal").querySelector(".btn-close").click();
+    .then(async (response) => {
+      const contentType = response.headers.get("content-type") || "";
+
+      if (contentType.includes("application/json")) {
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || `Upload failed (HTTP ${response.status}).`);
         }
+        return data;
+      }
+
+      const bodyText = await response.text();
+      throw new Error(
+        `Upload failed (HTTP ${response.status}). ${bodyText.slice(0, 200).replace(/\\s+/g, " ")}`
+      );
+    })
+    .then((data) => {
+      alert(data.message);
+      checkUploadStatus(labSelect.value, divisionSelect.value);
+      fileInput.value = ""; // Clear file input
+      // Refresh page to update division dropdowns if a new one was added to professor's list
+      if (data.division_added) {
+        window.location.reload();
       } else {
-        alert("Upload failed: " + data.error);
+        document.getElementById("uploadStudentExcelModal").querySelector(".btn-close").click();
       }
     })
     .catch(error => {
       console.error("Error uploading file:", error);
-      alert("An error occurred during upload.");
+      alert(error.message || "An error occurred during upload.");
     })
     .finally(() => {
       btn.innerHTML = originalText;

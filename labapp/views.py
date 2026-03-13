@@ -16,6 +16,9 @@ import json
 import openpyxl
 from io import BytesIO
 from datetime import datetime
+import logging
+
+logger = logging.getLogger(__name__)
 
 def home(request):
     return render(request, "base/home.html")
@@ -831,11 +834,14 @@ def professor_edit_profile(request):
 
 # New views for enhanced functionality
 
-@csrf_exempt
-@require_POST
-@login_required
 def upload_student_excel(request):
     """Upload student excel file for a division and assign to a specific lab"""
+    if request.method != "POST":
+        return JsonResponse({'success': False, 'error': 'Only POST is allowed.'}, status=405)
+
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'error': 'Please login again and retry.'}, status=401)
+
     try:
         professor = Professor.objects.get(user=request.user)
         excel_file = request.FILES.get('excel_file')
@@ -843,13 +849,16 @@ def upload_student_excel(request):
         lab_id = request.POST.get('lab_id')
 
         if not excel_file or not division_name or not lab_id:
-            return JsonResponse({'success': False, 'error': 'Missing file, division, or lab selection'})
+            return JsonResponse({'success': False, 'error': 'Missing file, division, or lab selection'}, status=400)
+
+        if not excel_file.name.lower().endswith('.xlsx'):
+            return JsonResponse({'success': False, 'error': 'Please upload a valid .xlsx file.'}, status=400)
 
         # Get the lab
         try:
             lab = Lab.objects.get(id=lab_id, professor=professor)
         except Lab.DoesNotExist:
-            return JsonResponse({'success': False, 'error': 'Invalid lab selected'})
+            return JsonResponse({'success': False, 'error': 'Invalid lab selected'}, status=400)
 
         # Get or create division
         division, created = Division.objects.get_or_create(
@@ -862,10 +871,13 @@ def upload_student_excel(request):
             return JsonResponse({
                 'success': False, 
                 'error': f'An Excel file is already uploaded for {lab.name} - {division_name}. Please delete the existing upload first.'
-            })
+            }, status=409)
 
         # Load workbook
-        wb = openpyxl.load_workbook(excel_file)
+        try:
+            wb = openpyxl.load_workbook(excel_file)
+        except Exception:
+            return JsonResponse({'success': False, 'error': 'Could not read this Excel file. Use a valid .xlsx file.'}, status=400)
         sheet = wb.active
 
         total_processed = 0
@@ -912,12 +924,13 @@ def upload_student_excel(request):
             professor.save()
             division_added = True
 
-        # Save the upload record for persistence
+        # Save the upload record for persistence and keep the original file.
+        excel_file.seek(0)
         ExcelUpload.objects.create(
             professor=professor,
             lab=lab,
             division=division,
-            file=excel_file.name,
+            file=excel_file,
             filename=excel_file.name
         )
 
@@ -928,8 +941,17 @@ def upload_student_excel(request):
             'message': f'Successfully processed {total_processed} students and assigned to division {division_name}.'
         })
 
+    except Professor.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Professor profile not found for this account.'}, status=403)
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)})
+        logger.exception("Student Excel upload failed for user_id=%s", getattr(request.user, 'id', None))
+        return JsonResponse(
+            {
+                'success': False,
+                'error': 'Server error while processing upload. Please try again.'
+            },
+            status=500
+        )
 
 @login_required
 def get_students_for_division(request):
