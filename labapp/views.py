@@ -20,6 +20,31 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+DOCUMENT_EXTENSIONS = (
+    '.pdf', '.doc', '.docx', '.ppt', '.pptx',
+    '.xls', '.xlsx', '.txt', '.csv', '.zip', '.rar'
+)
+
+
+def _resource_url_for_download(file_field):
+    """
+    Build a downloadable URL for uploaded resources.
+    For Cloudinary, document files should use /raw/upload/ instead of /image/upload/.
+    """
+    if not file_field:
+        return None
+
+    try:
+        url = file_field.url
+    except Exception:
+        return None
+
+    file_name = (getattr(file_field, 'name', '') or '').lower()
+    is_document = file_name.endswith(DOCUMENT_EXTENSIONS)
+    if is_document and '/image/upload/' in url:
+        return url.replace('/image/upload/', '/raw/upload/')
+    return url
+
 def home(request):
     return render(request, "base/home.html")
 
@@ -1985,6 +2010,35 @@ def check_call(request):
         
     return JsonResponse({'active': False})
 
+
+@login_required(login_url='student_login')
+def download_lab_resource(request, lab_id, resource_type):
+    """Student-safe download endpoint for lab syllabus/manual files."""
+    try:
+        student = Student.objects.get(user=request.user)
+    except Student.DoesNotExist:
+        return redirect('student_login')
+
+    lab = Lab.objects.filter(id=lab_id, students=student).first()
+    if lab is None:
+        return HttpResponse("Lab not found or not assigned to this student.", status=404)
+
+    if resource_type == 'syllabus':
+        resource = lab.syllabus
+    elif resource_type == 'manual':
+        resource = lab.manual
+    else:
+        return HttpResponse("Invalid resource type.", status=400)
+
+    if not resource:
+        return HttpResponse("Requested file is not available.", status=404)
+
+    resource_url = _resource_url_for_download(resource)
+    if not resource_url:
+        return HttpResponse("Unable to access requested file.", status=404)
+
+    return redirect(resource_url)
+
 @login_required
 def check_lab_resources_status(request):
     """Check if syllabus or manual are uploaded for a specific lab"""
@@ -1999,9 +2053,9 @@ def check_lab_resources_status(request):
         return JsonResponse({
             'success': True,
             'syllabus_name': lab.syllabus.name.split('/')[-1] if lab.syllabus else None,
-            'syllabus_url': lab.syllabus.url if lab.syllabus else None,
+            'syllabus_url': _resource_url_for_download(lab.syllabus),
             'manual_name': lab.manual.name.split('/')[-1] if lab.manual else None,
-            'manual_url': lab.manual.url if lab.manual else None
+            'manual_url': _resource_url_for_download(lab.manual)
         })
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
@@ -2039,7 +2093,7 @@ def upload_lab_resource(request):
             'success': True, 
             'message': f'{resource_type.capitalize()} uploaded successfully',
             'filename': uploaded_file.name,
-            'url': getattr(lab, resource_type).url
+            'url': _resource_url_for_download(getattr(lab, resource_type))
         })
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})

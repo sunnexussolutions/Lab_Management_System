@@ -45,6 +45,11 @@ name="edit_professor"
     path("student/update-profile/", views.update_profile, name="update_profile"),
     path("student/logout/", views.student_logout, name="student_logout"),
     path("student/check-call/", views.check_call, name="check_call"),
+    path(
+        "student/download-lab-resource/<int:lab_id>/<str:resource_type>/",
+        views.download_lab_resource,
+        name="student_download_lab_resource"
+    ),
     path("student/export-marks-excel/<int:lab_id>/", views.export_marks_excel, name="export_marks_excel"),
     path("student/delete-submission/<int:submission_id>/", views.delete_submission, name="delete_submission"),
 

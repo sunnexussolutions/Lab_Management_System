@@ -617,8 +617,8 @@ Select Course
                             <option value="">-- Select Lab --</option>
                             {% for lab in labs %}
                             <option value="{{ lab.id }}"
-                                data-syllabus="{% if lab.syllabus %}{{ lab.syllabus.url }}{% endif %}"
-                                data-manual="{% if lab.manual %}{{ lab.manual.url }}{% endif %}"
+                                data-syllabus="{% if lab.syllabus %}{% url 'student_download_lab_resource' lab.id 'syllabus' %}{% endif %}"
+                                data-manual="{% if lab.manual %}{% url 'student_download_lab_resource' lab.id 'manual' %}{% endif %}"
                                 data-professor="{{ lab.professor.name }}">
                                 {{ lab.name }}
                             </option>
