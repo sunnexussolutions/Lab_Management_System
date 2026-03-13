@@ -530,25 +530,44 @@ def view_professors(request):
     
 @login_required
 def add_professor(request):
+    if request.method != "POST":
+        return redirect("college_dashboard")
 
-    if request.method == "POST":
-
-        name = request.POST.get("name")
-        email = request.POST.get("email")
-        course = request.POST.get("course")
-
+    try:
         college = request.user.collegeadmin.college
+    except ObjectDoesNotExist:
+        messages.error(request, "Your account is not linked to a college admin profile.")
+        logout(request)
+        return redirect("college_auth")
 
+    name = request.POST.get("name", "").strip()
+    email = request.POST.get("email", "").strip()
+    course = request.POST.get("course", "").strip()
+
+    if not name or not email or not course:
+        messages.error(request, "Name, email, and course are required.")
+        return redirect("college_dashboard")
+
+    if Professor.objects.filter(email__iexact=email).exists():
+        messages.error(request, "A professor with this email already exists.")
+        return redirect("college_dashboard")
+
+    try:
         Professor.objects.create(
             college=college,
             name=name,
             email=email,
             course=course
         )
+    except IntegrityError:
+        messages.error(request, "Could not add professor due to duplicate data.")
+        return redirect("college_dashboard")
+    except DatabaseError:
+        messages.error(request, "Database is not ready. Run migrations and verify DATABASE_URL.")
+        return redirect("college_auth")
 
-        messages.success(request, f"Professor {name} added successfully!")
-
-    return redirect("college_dashboard")   
+    messages.success(request, f"Professor {name} added successfully!")
+    return redirect("college_dashboard")
 
 
 
