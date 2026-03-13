@@ -834,15 +834,12 @@ def professor_edit_profile(request):
 
 # New views for enhanced functionality
 
+@csrf_exempt
+@require_POST
+@login_required
 def upload_student_excel(request):
     """Upload student excel file for a division and assign to a specific lab"""
     try:
-        if request.method != "POST":
-            return JsonResponse({'success': False, 'error': 'Only POST is allowed.'}, status=405)
-
-        if not request.user.is_authenticated:
-            return JsonResponse({'success': False, 'error': 'Please login again and retry.'}, status=401)
-
         professor = Professor.objects.get(user=request.user)
         excel_file = request.FILES.get('excel_file')
         division_name = request.POST.get('division', '').strip()
@@ -924,15 +921,31 @@ def upload_student_excel(request):
             professor.save()
             division_added = True
 
-        # Save the upload record for persistence and keep the original file.
-        excel_file.seek(0)
-        ExcelUpload.objects.create(
-            professor=professor,
-            lab=lab,
-            division=division,
-            file=excel_file,
-            filename=excel_file.name
-        )
+        # Save upload tracking. If file storage fails, keep processing outcome
+        # and save filename-only marker to avoid blocking student imports.
+        try:
+            excel_file.seek(0)
+            ExcelUpload.objects.create(
+                professor=professor,
+                lab=lab,
+                division=division,
+                file=excel_file,
+                filename=excel_file.name
+            )
+        except Exception:
+            logger.exception(
+                "ExcelUpload file save failed for professor_id=%s, lab_id=%s, division=%s",
+                professor.id,
+                lab.id,
+                division.name,
+            )
+            ExcelUpload.objects.create(
+                professor=professor,
+                lab=lab,
+                division=division,
+                file=f"excel_uploads/{excel_file.name}",
+                filename=excel_file.name
+            )
 
         return JsonResponse({
             'success': True,
@@ -944,11 +957,11 @@ def upload_student_excel(request):
     except Professor.DoesNotExist:
         return JsonResponse({'success': False, 'error': 'Professor profile not found for this account.'}, status=403)
     except Exception as e:
-        logger.exception("Student Excel upload failed for user_id=%s", getattr(request.user, 'id', None))
+        logger.exception("Student Excel upload failed")
         return JsonResponse(
             {
                 'success': False,
-                'error': 'Server error while processing upload. Please try again.'
+                'error': f'{e.__class__.__name__}: {str(e)}'
             },
             status=500
         )
