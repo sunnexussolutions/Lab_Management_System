@@ -836,13 +836,13 @@ def professor_edit_profile(request):
 
 def upload_student_excel(request):
     """Upload student excel file for a division and assign to a specific lab"""
-    if request.method != "POST":
-        return JsonResponse({'success': False, 'error': 'Only POST is allowed.'}, status=405)
-
-    if not request.user.is_authenticated:
-        return JsonResponse({'success': False, 'error': 'Please login again and retry.'}, status=401)
-
     try:
+        if request.method != "POST":
+            return JsonResponse({'success': False, 'error': 'Only POST is allowed.'}, status=405)
+
+        if not request.user.is_authenticated:
+            return JsonResponse({'success': False, 'error': 'Please login again and retry.'}, status=401)
+
         professor = Professor.objects.get(user=request.user)
         excel_file = request.FILES.get('excel_file')
         division_name = request.POST.get('division', '').strip()

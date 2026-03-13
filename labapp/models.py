@@ -143,7 +143,7 @@ class ExcelUpload(models.Model):
     professor = models.ForeignKey(Professor, on_delete=models.CASCADE)
     lab = models.ForeignKey(Lab, on_delete=models.CASCADE)
     division = models.ForeignKey(Division, on_delete=models.CASCADE)
-    file = models.FileField(upload_to='excel_uploads/')
+    file = models.FileField(upload_to='excel_uploads/', max_length=500)
     filename = models.CharField(max_length=255)
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
