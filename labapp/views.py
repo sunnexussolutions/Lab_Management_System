@@ -870,47 +870,113 @@ def upload_student_excel(request):
                 'error': f'An Excel file is already uploaded for {lab.name} - {division_name}. Please delete the existing upload first.'
             }, status=409)
 
-        # Load workbook
+        # Guard file size on memory-constrained instances (Render starter/free).
+        max_excel_size_bytes = 3 * 1024 * 1024  # 3 MB
+        if getattr(excel_file, 'size', 0) > max_excel_size_bytes:
+            return JsonResponse(
+                {
+                    'success': False,
+                    'error': 'Excel file is too large for current server plan. Keep it under 3 MB.'
+                },
+                status=400
+            )
+
+        # Load workbook in read-only mode to reduce memory usage.
+        wb = None
         try:
-            wb = openpyxl.load_workbook(excel_file)
+            wb = openpyxl.load_workbook(excel_file, read_only=True, data_only=True)
         except Exception:
             return JsonResponse({'success': False, 'error': 'Could not read this Excel file. Use a valid .xlsx file.'}, status=400)
-        sheet = wb.active
+
+        parsed_rows = []
+        seen_prns = set()
+        try:
+            sheet = wb.active
+            for row in sheet.iter_rows(min_row=2, values_only=True):  # Skip header
+                if not row or len(row) < 2 or not row[0] or not row[1]:
+                    continue
+
+                name = str(row[0]).strip()
+                prn = str(row[1]).strip()
+                if not prn or prn.lower() == 'none' or prn in seen_prns:
+                    continue
+
+                seen_prns.add(prn)
+                parsed_rows.append((name, prn))
+        finally:
+            if wb is not None:
+                wb.close()
+
+        if not parsed_rows:
+            return JsonResponse({'success': False, 'error': 'No valid student rows found in the Excel file.'}, status=400)
 
         total_processed = 0
-        for row in sheet.iter_rows(min_row=2, values_only=True):  # Skip header
-            if not row or len(row) < 2 or not row[0] or not row[1]:
-                continue
-            
-            name, prn = str(row[0]).strip(), str(row[1]).strip()
-            username = prn.lower()
-            
-            # Create user if doesn't exist
-            if not User.objects.filter(username=username).exists():
-                user = User.objects.create_user(
-                    username=username,
-                    first_name=name.split()[0] if name else '',
-                    last_name=' '.join(name.split()[1:]) if name and len(name.split()) > 1 else ''
-                )
-            else:
-                user = User.objects.get(username=username)
+        conflicts_skipped = 0
 
-            # Create or update student
-            student, created = Student.objects.get_or_create(
-                prn=prn,
-                defaults={
-                    'user': user,
-                    'division': division
-                }
-            )
-            if not created:
-                # Sync division if already exists
-                student.division = division
-                student.save()
-            
-            # Assign to the specific lab
-            lab.students.add(student)
-            total_processed += 1
+        with transaction.atomic():
+            prns = [prn for _, prn in parsed_rows]
+            usernames = [prn.lower() for prn in prns]
+            name_by_username = {prn.lower(): name for name, prn in parsed_rows}
+
+            existing_users = {u.username: u for u in User.objects.filter(username__in=usernames)}
+            missing_usernames = [uname for uname in usernames if uname not in existing_users]
+
+            if missing_usernames:
+                new_users = []
+                for username in missing_usernames:
+                    full_name = name_by_username.get(username, '').strip()
+                    parts = full_name.split()
+                    first_name = parts[0] if parts else ''
+                    last_name = ' '.join(parts[1:]) if len(parts) > 1 else ''
+                    user = User(username=username, first_name=first_name, last_name=last_name)
+                    user.set_unusable_password()
+                    new_users.append(user)
+
+                User.objects.bulk_create(new_users, ignore_conflicts=True)
+                existing_users = {u.username: u for u in User.objects.filter(username__in=usernames)}
+
+            existing_students = {s.prn: s for s in Student.objects.filter(prn__in=prns)}
+            linked_students = {
+                s.user_id: s for s in Student.objects.filter(user_id__in=[u.id for u in existing_users.values() if u.id])
+            }
+
+            students_to_create = []
+            students_to_update = []
+
+            for _, prn in parsed_rows:
+                username = prn.lower()
+                user = existing_users.get(username)
+                if not user:
+                    continue
+
+                student = existing_students.get(prn)
+                if student:
+                    if student.division_id != division.id:
+                        student.division = division
+                        students_to_update.append(student)
+                    continue
+
+                # Avoid one-to-one conflicts: same user linked to another PRN.
+                linked_student = linked_students.get(user.id)
+                if linked_student and linked_student.prn != prn:
+                    conflicts_skipped += 1
+                    continue
+
+                students_to_create.append(Student(prn=prn, user=user, division=division))
+
+            if students_to_create:
+                Student.objects.bulk_create(students_to_create, ignore_conflicts=True)
+
+            if students_to_update:
+                Student.objects.bulk_update(students_to_update, ['division'])
+
+            assigned_students = list(Student.objects.filter(prn__in=prns))
+            through_model = lab.students.through
+            through_rows = [through_model(lab_id=lab.id, student_id=stu.id) for stu in assigned_students]
+            if through_rows:
+                through_model.objects.bulk_create(through_rows, ignore_conflicts=True)
+
+            total_processed = len(assigned_students)
 
         # Update professor's divisions list if new
         division_added = False
@@ -947,11 +1013,15 @@ def upload_student_excel(request):
                 filename=excel_file.name
             )
 
+        message = f'Successfully processed {total_processed} students and assigned to division {division_name}.'
+        if conflicts_skipped:
+            message += f' Skipped {conflicts_skipped} conflicted rows (same user linked to another PRN).'
+
         return JsonResponse({
             'success': True,
             'students_count': total_processed,
             'division_added': division_added,
-            'message': f'Successfully processed {total_processed} students and assigned to division {division_name}.'
+            'message': message
         })
 
     except Professor.DoesNotExist:
