@@ -1228,56 +1228,255 @@ def delete_upload(request):
 
 @csrf_exempt
 @require_POST
-@login_required
+@login_required(login_url='professor_auth')
 def save_marks(request):
-    """Save marks for students"""
+    """Save marks for students using batched queries to avoid timeouts."""
     try:
         data = json.loads(request.body)
-        division_name = data.get('division')
-        lab_id = data.get('lab_id')
-        marks_data = data.get('marks_data')
- 
-        if not division_name or not marks_data or not lab_id:
-            return JsonResponse({'success': False, 'error': 'Missing division, lab, or marks data'})
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON payload'}, status=400)
 
+    division_name = (data.get('division') or '').strip()
+    lab_id = data.get('lab_id')
+    marks_data = data.get('marks_data')
+
+    if not division_name or lab_id is None or not isinstance(marks_data, list):
+        return JsonResponse(
+            {'success': False, 'error': 'Missing or invalid division, lab, or marks data'},
+            status=400
+        )
+
+    def _to_float(value):
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return 0.0
+
+    try:
         professor = Professor.objects.get(user=request.user)
         division = Division.objects.get(name__iexact=division_name, college=professor.college)
-        lab = Lab.objects.get(id=lab_id)
+        lab = Lab.objects.get(id=lab_id, professor=professor, college=professor.college)
+    except Professor.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Professor profile not found.'}, status=403)
+    except Division.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Division not found for this college.'}, status=404)
+    except Lab.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Lab not found for this professor.'}, status=404)
 
-        saved_count = 0
-        for student_data in marks_data:
-            # Find student within the context of the division and lab
-            student = Student.objects.get(prn=student_data['prn'], division=division, assigned_labs=lab)
-            
-            for exp_data in student_data['experiments']:
-                exp_num = exp_data['experiment_number']
-                
-                # Get or create experiment for this lab to ensure storage works
-                experiment, _ = Experiment.objects.get_or_create(
-                    number=exp_num,
-                    lab=lab,
-                    defaults={'title': f"Experiment {exp_num}"}
+    prns = []
+    experiment_numbers = set()
+    for item in marks_data:
+        if not isinstance(item, dict):
+            continue
+        prn = str(item.get('prn', '')).strip()
+        if prn:
+            prns.append(prn)
+
+        experiments = item.get('experiments', [])
+        if not isinstance(experiments, list):
+            continue
+
+        for exp_data in experiments:
+            if not isinstance(exp_data, dict):
+                continue
+            try:
+                exp_num = int(exp_data.get('experiment_number'))
+            except (TypeError, ValueError):
+                continue
+            if exp_num > 0:
+                experiment_numbers.add(exp_num)
+
+    if not prns or not experiment_numbers:
+        return JsonResponse({'success': True, 'saved_count': 0, 'updated_submissions': 0})
+
+    students = Student.objects.filter(
+        prn__in=prns,
+        division=division,
+        assigned_labs=lab
+    ).only('id', 'prn')
+    students_by_prn = {student.prn: student for student in students}
+
+    if not students_by_prn:
+        return JsonResponse(
+            {'success': False, 'error': 'No valid students found for this division and lab.'},
+            status=400
+        )
+
+    saved_count = 0
+    updated_submissions = 0
+
+    try:
+        with transaction.atomic():
+            existing_experiments = Experiment.objects.filter(
+                lab=lab,
+                number__in=experiment_numbers
+            )
+            experiments_by_number = {
+                experiment.number: experiment for experiment in existing_experiments
+            }
+
+            missing_experiments = [
+                Experiment(lab=lab, number=exp_num, title=f"Experiment {exp_num}")
+                for exp_num in experiment_numbers
+                if exp_num not in experiments_by_number
+            ]
+            if missing_experiments:
+                Experiment.objects.bulk_create(missing_experiments)
+                for experiment in Experiment.objects.filter(lab=lab, number__in=experiment_numbers):
+                    experiments_by_number[experiment.number] = experiment
+
+            student_ids = [student.id for student in students_by_prn.values()]
+            experiment_ids = [experiment.id for experiment in experiments_by_number.values()]
+
+            existing_submissions = Submission.objects.filter(
+                student_id__in=student_ids,
+                experiment_id__in=experiment_ids
+            ).only('id', 'student_id', 'experiment_id', 'status')
+            submissions_by_key = {
+                (submission.student_id, submission.experiment_id): submission
+                for submission in existing_submissions
+            }
+
+            work_items = []
+            missing_submissions = []
+
+            for item in marks_data:
+                if not isinstance(item, dict):
+                    continue
+
+                prn = str(item.get('prn', '')).strip()
+                student = students_by_prn.get(prn)
+                if student is None:
+                    continue
+
+                experiments = item.get('experiments', [])
+                if not isinstance(experiments, list):
+                    continue
+
+                for exp_data in experiments:
+                    if not isinstance(exp_data, dict):
+                        continue
+
+                    try:
+                        exp_num = int(exp_data.get('experiment_number'))
+                    except (TypeError, ValueError):
+                        continue
+
+                    experiment = experiments_by_number.get(exp_num)
+                    if experiment is None:
+                        continue
+
+                    viva = _to_float(exp_data.get('viva_marks', 0))
+                    exp_marks = _to_float(exp_data.get('experiment_marks', 0))
+                    writeup = _to_float(exp_data.get('writeup_marks', 0))
+
+                    key = (student.id, experiment.id)
+                    submission = submissions_by_key.get(key)
+
+                    # Do not create empty mark records for non-submitted work.
+                    if submission is None and viva == 0 and exp_marks == 0 and writeup == 0:
+                        continue
+
+                    if submission is None:
+                        missing_submissions.append(
+                            Submission(
+                                student=student,
+                                lab=lab,
+                                experiment=experiment,
+                                experiment_name=f"Experiment {exp_num}",
+                                code_screenshot='',
+                                output_screenshot='',
+                                status='evaluated'
+                            )
+                        )
+
+                    work_items.append((key, viva, exp_marks, writeup))
+
+            if missing_submissions:
+                Submission.objects.bulk_create(missing_submissions)
+                # Reload to ensure IDs are available on all DB backends.
+                submissions_by_key = {
+                    (submission.student_id, submission.experiment_id): submission
+                    for submission in Submission.objects.filter(
+                        student_id__in=student_ids,
+                        experiment_id__in=experiment_ids
+                    ).only('id', 'student_id', 'experiment_id', 'status')
+                }
+
+            target_submission_ids = list({
+                submissions_by_key[key].id
+                for key, _, _, _ in work_items
+                if key in submissions_by_key
+            })
+
+            evaluations_by_submission_id = {
+                evaluation.submission_id: evaluation
+                for evaluation in Evaluation.objects.filter(
+                    submission_id__in=target_submission_ids
                 )
-                
-                submission, created = Submission.objects.get_or_create(
-                    student=student, 
-                    experiment=experiment
-                )
-                
-                evaluation, created = Evaluation.objects.get_or_create(
-                    submission=submission
-                )
-                
-                evaluation.viva_marks = float(exp_data.get('viva_marks', 0))
-                evaluation.experiment_marks = float(exp_data.get('experiment_marks', 0))
-                evaluation.writeup_marks = float(exp_data.get('writeup_marks', 0))
-                evaluation.save()
-                
+            }
+
+            evaluations_to_create = []
+            evaluations_to_update = []
+            submissions_to_update = {}
+
+            for key, viva, exp_marks, writeup in work_items:
+                submission = submissions_by_key.get(key)
+                if submission is None:
+                    continue
+
+                evaluation = evaluations_by_submission_id.get(submission.id)
+                if evaluation is None:
+                    evaluations_to_create.append(
+                        Evaluation(
+                            submission=submission,
+                            viva_marks=viva,
+                            experiment_marks=exp_marks,
+                            writeup_marks=writeup
+                        )
+                    )
+                else:
+                    changed = False
+                    if evaluation.viva_marks != viva:
+                        evaluation.viva_marks = viva
+                        changed = True
+                    if evaluation.experiment_marks != exp_marks:
+                        evaluation.experiment_marks = exp_marks
+                        changed = True
+                    if evaluation.writeup_marks != writeup:
+                        evaluation.writeup_marks = writeup
+                        changed = True
+                    if changed:
+                        evaluations_to_update.append(evaluation)
+
+                if submission.status != 'evaluated':
+                    submission.status = 'evaluated'
+                    submissions_to_update[submission.id] = submission
+
                 saved_count += 1
- 
-        return JsonResponse({'success': True, 'saved_count': saved_count})
+
+            if evaluations_to_create:
+                Evaluation.objects.bulk_create(evaluations_to_create)
+            if evaluations_to_update:
+                Evaluation.objects.bulk_update(
+                    evaluations_to_update,
+                    ['viva_marks', 'experiment_marks', 'writeup_marks']
+                )
+            if submissions_to_update:
+                Submission.objects.bulk_update(
+                    list(submissions_to_update.values()),
+                    ['status']
+                )
+                updated_submissions = len(submissions_to_update)
+
+        return JsonResponse({
+            'success': True,
+            'saved_count': saved_count,
+            'updated_submissions': updated_submissions
+        })
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)})
+        logger.exception("save_marks failed")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 @login_required
 def download_marks_excel(request):
@@ -1628,7 +1827,7 @@ def delete_submission(request, submission_id):
         
     return redirect('student_dashboard')
 
-@login_required
+@login_required(login_url='professor_auth')
 @csrf_exempt
 def save_attendance(request):
     """Save/update attendance records for a division on a specific date"""
@@ -1638,39 +1837,101 @@ def save_attendance(request):
     try:
         data = json.loads(request.body)
         lab_id = data.get('lab_id')
-        division_name = data.get('division')
+        division_name = (data.get('division') or '').strip()
         date_str = data.get('date')
-        attendance_data = data.get('attendance', []) # List of {student_id: int, present: bool}
+        attendance_data = data.get('attendance', [])  # [{student_id: int, present: bool}]
 
-        if not all([lab_id, division_name, date_str]):
-            return JsonResponse({'success': False, 'error': 'Missing required fields'})
+        if not all([lab_id, division_name, date_str]) or not isinstance(attendance_data, list):
+            return JsonResponse({'success': False, 'error': 'Missing or invalid required fields'}, status=400)
 
         professor = Professor.objects.get(user=request.user)
-        lab = Lab.objects.get(id=lab_id)
+        division = Division.objects.get(name__iexact=division_name, college=professor.college)
+        lab = Lab.objects.get(id=lab_id, professor=professor, college=professor.college)
         # Parse date from YYYY-MM-DD
         date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
 
+        requested_student_ids = []
+        normalized_entries = []
         for entry in attendance_data:
-            student_id = entry.get('student_id')
-            is_present = entry.get('present')
-            
-            student = Student.objects.get(id=student_id)
-            
-            # Create or update attendance record
-            Attendance.objects.update_or_create(
-                student=student,
-                lab=lab,
-                date=date_obj,
-                defaults={'present': is_present}
-            )
+            if not isinstance(entry, dict):
+                continue
+            try:
+                student_id = int(entry.get('student_id'))
+            except (TypeError, ValueError):
+                continue
+            is_present = bool(entry.get('present'))
+            requested_student_ids.append(student_id)
+            normalized_entries.append((student_id, is_present))
+
+        if not requested_student_ids:
+            return JsonResponse({'success': False, 'error': 'No valid attendance rows provided.'}, status=400)
+
+        valid_students = Student.objects.filter(
+            id__in=requested_student_ids,
+            division=division,
+            assigned_labs=lab
+        ).only('id')
+        valid_student_ids = {student.id for student in valid_students}
+
+        if not valid_student_ids:
+            return JsonResponse({'success': False, 'error': 'No valid students found for this lab/division.'}, status=400)
+
+        existing_records = Attendance.objects.filter(
+            lab=lab,
+            date=date_obj,
+            student_id__in=valid_student_ids
+        ).order_by('id')
+
+        attendance_by_student_id = {}
+        for record in existing_records:
+            # Keep first record per student to tolerate historical duplicates.
+            if record.student_id not in attendance_by_student_id:
+                attendance_by_student_id[record.student_id] = record
+
+        to_create = []
+        to_update = []
+
+        for student_id, is_present in normalized_entries:
+            if student_id not in valid_student_ids:
+                continue
+
+            existing = attendance_by_student_id.get(student_id)
+            if existing is None:
+                to_create.append(
+                    Attendance(
+                        student_id=student_id,
+                        lab=lab,
+                        date=date_obj,
+                        present=is_present
+                    )
+                )
+            elif existing.present != is_present:
+                existing.present = is_present
+                to_update.append(existing)
+
+        with transaction.atomic():
+            if to_create:
+                Attendance.objects.bulk_create(to_create)
+            if to_update:
+                Attendance.objects.bulk_update(to_update, ['present'])
 
         return JsonResponse({
             'success': True, 
-            'message': f'Attendance for {date_str} saved successfully.'
+            'message': f'Attendance for {date_str} saved successfully.',
+            'saved_count': len(to_create) + len(to_update)
         })
 
+    except Professor.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Professor profile not found.'}, status=403)
+    except Division.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Division not found for this college.'}, status=404)
+    except Lab.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Lab not found for this professor.'}, status=404)
+    except ValueError:
+        return JsonResponse({'success': False, 'error': 'Invalid date format. Use YYYY-MM-DD.'}, status=400)
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)})
+        logger.exception("save_attendance failed")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 @login_required
 @csrf_exempt

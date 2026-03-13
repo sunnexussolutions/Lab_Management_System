@@ -77,6 +77,27 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("enterMarksModal")
   );
 
+  async function parseJsonOrThrow(response) {
+    const text = await response.text();
+    let data;
+
+    try {
+      data = JSON.parse(text);
+    } catch (err) {
+      if (response.redirected && response.url.includes("/login/")) {
+        throw new Error("Your session expired. Please login again.");
+      }
+      const snippet = (text || "").replace(/\s+/g, " ").trim().slice(0, 180);
+      throw new Error(`Unexpected server response (HTTP ${response.status}): ${snippet || "empty body"}`);
+    }
+
+    if (!response.ok) {
+      throw new Error(data.error || data.message || `Request failed (HTTP ${response.status})`);
+    }
+
+    return data;
+  }
+
   document.getElementById("enterMarksBtn")?.addEventListener("click", (e) => {
     e.preventDefault();
     selectBatchModal.show();
@@ -174,6 +195,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     fetch("/professor/save-marks/", {
       method: "POST",
+      credentials: "same-origin",
       headers: {
         "Content-Type": "application/json",
         "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value
@@ -184,7 +206,7 @@ document.addEventListener("DOMContentLoaded", () => {
         marks_data: marksData
       })
     })
-      .then(response => response.json())
+      .then(parseJsonOrThrow)
       .then(data => {
         if (data.success) {
           alert("Marks saved successfully!");
@@ -194,7 +216,7 @@ document.addEventListener("DOMContentLoaded", () => {
       })
       .catch(error => {
         console.error("Error:", error);
-        alert("An error occurred while saving marks.");
+        alert("Error while saving marks: " + (error.message || "Unknown error"));
       });
   };
 
@@ -869,13 +891,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
       fetch("/professor/save-attendance/", {
         method: "POST",
+        credentials: "same-origin",
         headers: {
           "Content-Type": "application/json",
           "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value
         },
         body: JSON.stringify(pendingAttendanceData)
       })
-      .then(response => response.json())
+      .then(parseJsonOrThrow)
       .then(data => {
         if (data.success) {
           alert(data.message);
@@ -887,7 +910,7 @@ document.addEventListener("DOMContentLoaded", () => {
       })
       .catch(err => {
         console.error("Error saving attendance:", err);
-        alert("An error occurred while saving attendance.");
+        alert("Error while saving attendance: " + (err.message || "Unknown error"));
       })
       .finally(() => {
         confirmSaveAttendanceBtn.disabled = false;
