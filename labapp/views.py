@@ -49,6 +49,20 @@ def _resource_url_for_download(file_field):
     return url
 
 
+def _resource_exists(file_field):
+    """True when a file reference has a backing object in its storage."""
+    try:
+        if not file_field:
+            return False
+        storage = getattr(file_field, 'storage', None)
+        name = getattr(file_field, 'name', '')
+        if not storage or not name:
+            return False
+        return storage.exists(name)
+    except Exception:
+        return False
+
+
 def _build_lab_resource_url(lab_id, resource_type, download=False):
     """Return app endpoint URL for serving lab resources."""
     url = reverse('student_download_lab_resource', args=[lab_id, resource_type])
@@ -75,11 +89,12 @@ def _file_response_from_field(file_field, download=False):
         response['Content-Disposition'] = f'{disposition}; filename="{filename}"'
         return response
     except Exception:
+        logger.exception("Failed to stream lab resource from storage: %s", filename)
         # Fallback for storages that prefer URL-based access.
         resource_url = _resource_url_for_download(file_field)
         if resource_url:
             return redirect(resource_url)
-        return HttpResponse("Unable to access requested file.", status=404)
+        return HttpResponse("Unable to access requested file. Please re-upload from professor panel.", status=404)
 
 def home(request):
     return render(request, "base/home.html")
@@ -2069,6 +2084,12 @@ def download_lab_resource(request, lab_id, resource_type):
     else:
         return HttpResponse("Invalid resource type.", status=400)
 
+    if not _resource_exists(resource):
+        return HttpResponse(
+            "File is missing in storage for this lab resource. Please ask the professor to re-upload it.",
+            status=404
+        )
+
     should_download = request.GET.get('download') == '1'
     return _file_response_from_field(resource, download=should_download)
 
@@ -2083,12 +2104,15 @@ def check_lab_resources_status(request):
         professor = Professor.objects.get(user=request.user)
         lab = Lab.objects.get(id=lab_id, professor=professor)
         
+        syllabus_available = _resource_exists(lab.syllabus)
+        manual_available = _resource_exists(lab.manual)
+
         return JsonResponse({
             'success': True,
-            'syllabus_name': lab.syllabus.name.split('/')[-1] if lab.syllabus else None,
-            'syllabus_url': _build_lab_resource_url(lab.id, 'syllabus', download=False) if lab.syllabus else None,
-            'manual_name': lab.manual.name.split('/')[-1] if lab.manual else None,
-            'manual_url': _build_lab_resource_url(lab.id, 'manual', download=False) if lab.manual else None
+            'syllabus_name': lab.syllabus.name.split('/')[-1] if syllabus_available else None,
+            'syllabus_url': _build_lab_resource_url(lab.id, 'syllabus', download=False) if syllabus_available else None,
+            'manual_name': lab.manual.name.split('/')[-1] if manual_available else None,
+            'manual_url': _build_lab_resource_url(lab.id, 'manual', download=False) if manual_available else None
         })
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
