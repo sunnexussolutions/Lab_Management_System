@@ -51,11 +51,17 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'cloudinary',
-    'cloudinary_storage',
-
     'labapp',
 ]
+
+# Cloudinary is optional. Keep local file storage by default and enable
+# Cloudinary only when explicitly requested via environment variable.
+ENABLE_CLOUDINARY = os.environ.get('ENABLE_CLOUDINARY', 'False') == 'True'
+if ENABLE_CLOUDINARY:
+    INSTALLED_APPS += [
+        'cloudinary',
+        'cloudinary_storage',
+    ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -158,6 +164,11 @@ STORAGES = {
         "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
     },
 }
+
+if ENABLE_CLOUDINARY:
+    STORAGES["default"] = {
+        "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
+    }
 
 # Serve static files from STATICFILES_DIRS when collectstatic is missing.
 WHITENOISE_USE_FINDERS = True
