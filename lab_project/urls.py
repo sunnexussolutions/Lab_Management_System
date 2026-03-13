@@ -100,5 +100,8 @@ name="edit_professor"
     ),
 ]
 
-if settings.DEBUG:
+# Serve uploaded media files:
+# - in DEBUG for local development
+# - in production when using local filesystem storage (Cloudinary disabled)
+if settings.DEBUG or not getattr(settings, "ENABLE_CLOUDINARY", False):
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -1706,7 +1706,7 @@ def toggle_viva_session(request):
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
 
-@login_required
+@login_required(login_url='student_login')
 def check_call(request):
     """Student dashboard pings this to see if a professor is calling them"""
     try:
