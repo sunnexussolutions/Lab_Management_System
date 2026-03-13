@@ -898,7 +898,7 @@ def upload_student_excel(request):
             professor=professor,
             lab=lab,
             division=division,
-            file=excel_file,
+            file=excel_file.name,
             filename=excel_file.name
         )
 
