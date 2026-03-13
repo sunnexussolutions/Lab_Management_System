@@ -3,13 +3,14 @@ from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse, HttpResponse, FileResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.core.mail import send_mail, EmailMessage
 from django.conf import settings
 from django.utils import timezone
 from django.core.exceptions import ObjectDoesNotExist
+from django.urls import reverse
 from django.db import DatabaseError, IntegrityError, transaction
 from .models import College, CollegeAdmin, Lab, Professor, Student, Division, Experiment, Submission, Evaluation, Attendance, VivaSession, ExcelUpload
 import json
@@ -17,6 +18,8 @@ import openpyxl
 from io import BytesIO
 from datetime import datetime
 import logging
+import mimetypes
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +47,39 @@ def _resource_url_for_download(file_field):
     if is_document and '/image/upload/' in url:
         return url.replace('/image/upload/', '/raw/upload/')
     return url
+
+
+def _build_lab_resource_url(lab_id, resource_type, download=False):
+    """Return app endpoint URL for serving lab resources."""
+    url = reverse('student_download_lab_resource', args=[lab_id, resource_type])
+    if download:
+        return f"{url}?download=1"
+    return url
+
+
+def _file_response_from_field(file_field, download=False):
+    """
+    Build a streaming response from storage (works for local and Cloudinary backends).
+    Falls back to redirect URL only if direct open fails.
+    """
+    if not file_field:
+        return HttpResponse("Requested file is not available.", status=404)
+
+    filename = os.path.basename(getattr(file_field, 'name', '') or 'download')
+    content_type, _ = mimetypes.guess_type(filename)
+    disposition = 'attachment' if download else 'inline'
+
+    try:
+        file_field.open('rb')
+        response = FileResponse(file_field, content_type=content_type or 'application/octet-stream')
+        response['Content-Disposition'] = f'{disposition}; filename="{filename}"'
+        return response
+    except Exception:
+        # Fallback for storages that prefer URL-based access.
+        resource_url = _resource_url_for_download(file_field)
+        if resource_url:
+            return redirect(resource_url)
+        return HttpResponse("Unable to access requested file.", status=404)
 
 def home(request):
     return render(request, "base/home.html")
@@ -2011,17 +2047,20 @@ def check_call(request):
     return JsonResponse({'active': False})
 
 
-@login_required(login_url='student_login')
+@login_required
 def download_lab_resource(request, lab_id, resource_type):
-    """Student-safe download endpoint for lab syllabus/manual files."""
-    try:
-        student = Student.objects.get(user=request.user)
-    except Student.DoesNotExist:
-        return redirect('student_login')
-
-    lab = Lab.objects.filter(id=lab_id, students=student).first()
+    """
+    Shared endpoint for student/professor resource access.
+    Students can access assigned labs; professors can access their own labs.
+    """
+    lab = Lab.objects.filter(id=lab_id).first()
     if lab is None:
-        return HttpResponse("Lab not found or not assigned to this student.", status=404)
+        return HttpResponse("Lab not found.", status=404)
+
+    is_assigned_student = Student.objects.filter(user=request.user, assigned_labs=lab).exists()
+    is_lab_professor = Professor.objects.filter(user=request.user, id=lab.professor_id).exists()
+    if not (is_assigned_student or is_lab_professor):
+        return HttpResponse("You do not have access to this file.", status=403)
 
     if resource_type == 'syllabus':
         resource = lab.syllabus
@@ -2030,14 +2069,8 @@ def download_lab_resource(request, lab_id, resource_type):
     else:
         return HttpResponse("Invalid resource type.", status=400)
 
-    if not resource:
-        return HttpResponse("Requested file is not available.", status=404)
-
-    resource_url = _resource_url_for_download(resource)
-    if not resource_url:
-        return HttpResponse("Unable to access requested file.", status=404)
-
-    return redirect(resource_url)
+    should_download = request.GET.get('download') == '1'
+    return _file_response_from_field(resource, download=should_download)
 
 @login_required
 def check_lab_resources_status(request):
@@ -2053,9 +2086,9 @@ def check_lab_resources_status(request):
         return JsonResponse({
             'success': True,
             'syllabus_name': lab.syllabus.name.split('/')[-1] if lab.syllabus else None,
-            'syllabus_url': _resource_url_for_download(lab.syllabus),
+            'syllabus_url': _build_lab_resource_url(lab.id, 'syllabus', download=False) if lab.syllabus else None,
             'manual_name': lab.manual.name.split('/')[-1] if lab.manual else None,
-            'manual_url': _resource_url_for_download(lab.manual)
+            'manual_url': _build_lab_resource_url(lab.id, 'manual', download=False) if lab.manual else None
         })
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
@@ -2093,7 +2126,7 @@ def upload_lab_resource(request):
             'success': True, 
             'message': f'{resource_type.capitalize()} uploaded successfully',
             'filename': uploaded_file.name,
-            'url': _resource_url_for_download(getattr(lab, resource_type))
+            'url': _build_lab_resource_url(lab.id, resource_type, download=False)
         })
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
