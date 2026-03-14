@@ -1,5 +1,23 @@
 from django.db import models
 from django.contrib.auth.models import User 
+from django.conf import settings
+from django.core.files.storage import default_storage
+
+
+def lab_document_storage():
+    """
+    Upload lab documents to Cloudinary as raw files when enabled.
+    This prevents .docx/.pdf uploads from being treated as images.
+    """
+    if getattr(settings, "ENABLE_CLOUDINARY", False):
+        try:
+            from cloudinary_storage.storage import RawMediaCloudinaryStorage
+            return RawMediaCloudinaryStorage()
+        except Exception:
+            # Fall back to the configured default storage if Cloudinary raw
+            # storage is unavailable for any reason.
+            return default_storage
+    return default_storage
 
 class College(models.Model):
     name = models.CharField(max_length=200)
@@ -58,12 +76,14 @@ class Lab(models.Model):
     name = models.CharField(max_length=200)
 
     syllabus = models.FileField(
+        storage=lab_document_storage,
         upload_to="syllabus/",
         blank=True,
         null=True
     )
 
     manual = models.FileField(
+        storage=lab_document_storage,
         upload_to="manuals/",
         blank=True,
         null=True
