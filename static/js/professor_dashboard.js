@@ -98,6 +98,34 @@ document.addEventListener("DOMContentLoaded", () => {
     return data;
   }
 
+  async function downloadExcelOrAlert(url, fallbackFilename) {
+    try {
+      const response = await fetch(url, {
+        method: "GET",
+        credentials: "same-origin"
+      });
+
+      if (!response.ok) {
+        const bodyText = await response.text();
+        const snippet = (bodyText || "").replace(/\s+/g, " ").trim().slice(0, 200);
+        throw new Error(snippet || `Request failed (HTTP ${response.status})`);
+      }
+
+      const blob = await response.blob();
+      const objectUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = fallbackFilename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.setTimeout(() => window.URL.revokeObjectURL(objectUrl), 1000);
+    } catch (error) {
+      console.error("Export download failed:", error);
+      alert("Export failed: " + (error.message || "Unable to download file."));
+    }
+  }
+
   document.getElementById("enterMarksBtn")?.addEventListener("click", (e) => {
     e.preventDefault();
     selectBatchModal.show();
@@ -146,36 +174,30 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Download Marks Excel
   document.getElementById("downloadMarksExcelBtn").addEventListener("click", () => {
-    const division = document.getElementById("selectedDivision").dataset.division;
-    const labId = document.getElementById("selectedDivision").dataset.labId;
+    const division = (document.getElementById("selectedDivision").dataset.division || "").trim();
+    const labId = (document.getElementById("selectedDivision").dataset.labId || "").trim();
     if (!division || !labId) {
       alert("Missing division or lab information!");
       return;
     }
 
-    const link = document.createElement('a');
-    link.href = `/professor/download-marks-excel/?division=${division}&lab_id=${labId}`;
-    link.download = `marks_${division}_lab_${labId}.xlsx`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const params = new URLSearchParams({ division, lab_id: labId });
+    const url = `/professor/download-marks-excel/?${params.toString()}`;
+    downloadExcelOrAlert(url, `marks_${division}_lab_${labId}.xlsx`);
   });
 
   // Download Total Marks Excel (totals only, no breakdown)
   document.getElementById("downloadTotalMarksBtn").addEventListener("click", () => {
-    const division = document.getElementById("selectedDivision").dataset.division;
-    const labId = document.getElementById("selectedDivision").dataset.labId;
+    const division = (document.getElementById("selectedDivision").dataset.division || "").trim();
+    const labId = (document.getElementById("selectedDivision").dataset.labId || "").trim();
     if (!division || !labId) {
       alert("Missing division or lab information!");
       return;
     }
 
-    const link = document.createElement('a');
-    link.href = `/professor/download-total-marks-excel/?division=${division}&lab_id=${labId}`;
-    link.download = `total_marks_${division}_lab_${labId}.xlsx`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const params = new URLSearchParams({ division, lab_id: labId });
+    const url = `/professor/download-total-marks-excel/?${params.toString()}`;
+    downloadExcelOrAlert(url, `total_marks_${division}_lab_${labId}.xlsx`);
   });
 
   // Save Marks Function

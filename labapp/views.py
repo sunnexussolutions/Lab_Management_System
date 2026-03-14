@@ -20,6 +20,7 @@ from datetime import datetime
 import logging
 import mimetypes
 import os
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +28,24 @@ DOCUMENT_EXTENSIONS = (
     '.pdf', '.doc', '.docx', '.ppt', '.pptx',
     '.xls', '.xlsx', '.txt', '.csv', '.zip', '.rar'
 )
+
+
+def _safe_worksheet_title(title, fallback='Sheet1'):
+    """
+    Excel sheet titles cannot contain []:*?/\\ and are limited to 31 chars.
+    """
+    cleaned = re.sub(r'[\[\]\*\?/:\\]', ' ', str(title or '').strip())
+    cleaned = re.sub(r'\s+', ' ', cleaned).strip()
+    return (cleaned or fallback)[:31]
+
+
+def _safe_filename_part(value, fallback='file'):
+    """
+    Keep download filenames cross-platform safe and predictable.
+    """
+    cleaned = re.sub(r'[^A-Za-z0-9._-]+', '_', str(value or '').strip())
+    cleaned = cleaned.strip('._')
+    return cleaned or fallback
 
 
 def _resource_url_for_download(file_field):
@@ -1557,20 +1576,20 @@ def save_marks(request):
 @login_required
 def download_marks_excel(request):
     """Download marks as Excel file"""
-    division_name = request.GET.get('division')
+    division_name = (request.GET.get('division') or '').strip()
     lab_id = request.GET.get('lab_id')
     if not division_name or not lab_id:
         return HttpResponse("Division or Lab not specified", status=400)
 
     try:
         professor = Professor.objects.get(user=request.user)
-        division = Division.objects.get(name=division_name, college=professor.college)
-        lab = Lab.objects.get(id=lab_id)
+        division = Division.objects.get(name__iexact=division_name, college=professor.college)
+        lab = Lab.objects.get(id=lab_id, professor=professor, college=professor.college)
         
         # Create workbook
         wb = openpyxl.Workbook()
         ws = wb.active
-        ws.title = f"Marks_{division_name}"
+        ws.title = _safe_worksheet_title(f"Marks_{division.name}", fallback="Marks")
         
         # Headers
         headers = ['PRN', 'Student Name']
@@ -1625,16 +1644,24 @@ def download_marks_excel(request):
             buffer.getvalue(),
             content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         )
-        response['Content-Disposition'] = f'attachment; filename=marks_{division_name}.xlsx'
+        division_slug = _safe_filename_part(division.name, fallback='division')
+        lab_slug = _safe_filename_part(lab.name, fallback='lab')
+        response['Content-Disposition'] = f'attachment; filename="marks_{division_slug}_{lab_slug}.xlsx"'
         return response
-        
+    except Professor.DoesNotExist:
+        return HttpResponse("Professor profile not found.", status=403)
+    except Division.DoesNotExist:
+        return HttpResponse("Division not found for this college.", status=404)
+    except Lab.DoesNotExist:
+        return HttpResponse("Lab not found for this professor.", status=404)
     except Exception as e:
-        return HttpResponse(f"Error: {str(e)}", status=500)
+        logger.exception("download_marks_excel failed")
+        return HttpResponse(f"Export failed: {str(e)}", status=500)
 
 @login_required
 def download_total_marks_excel(request):
     """Download Excel with only total marks per experiment per student (no breakdown)"""
-    division_name = request.GET.get('division')
+    division_name = (request.GET.get('division') or '').strip()
     lab_id = request.GET.get('lab_id')
 
     if not division_name or not lab_id:
@@ -1642,12 +1669,12 @@ def download_total_marks_excel(request):
 
     try:
         professor = Professor.objects.get(user=request.user)
-        division = Division.objects.get(name=division_name, college=professor.college)
-        lab = Lab.objects.get(id=lab_id)
+        division = Division.objects.get(name__iexact=division_name, college=professor.college)
+        lab = Lab.objects.get(id=lab_id, professor=professor, college=professor.college)
 
         wb = openpyxl.Workbook()
         ws = wb.active
-        ws.title = f"Totals_{division_name}"
+        ws.title = _safe_worksheet_title(f"Totals_{division.name}", fallback="Totals")
 
         from openpyxl.styles import Font, Alignment, PatternFill
         bold_font = Font(bold=True)
@@ -1715,11 +1742,20 @@ def download_total_marks_excel(request):
             buffer.getvalue(),
             content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         )
-        response['Content-Disposition'] = f'attachment; filename=total_marks_{division_name}_{lab.name}.xlsx'
+        division_slug = _safe_filename_part(division.name, fallback='division')
+        lab_slug = _safe_filename_part(lab.name, fallback='lab')
+        response['Content-Disposition'] = f'attachment; filename="total_marks_{division_slug}_{lab_slug}.xlsx"'
         return response
 
+    except Professor.DoesNotExist:
+        return HttpResponse("Professor profile not found.", status=403)
+    except Division.DoesNotExist:
+        return HttpResponse("Division not found for this college.", status=404)
+    except Lab.DoesNotExist:
+        return HttpResponse("Lab not found for this professor.", status=404)
     except Exception as e:
-        return HttpResponse(f"Error: {str(e)}", status=500)
+        logger.exception("download_total_marks_excel failed")
+        return HttpResponse(f"Export failed: {str(e)}", status=500)
 
 @csrf_exempt
 @require_POST
