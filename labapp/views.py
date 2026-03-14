@@ -1598,8 +1598,43 @@ def download_marks_excel(request):
         headers.extend(['Total_Marks', 'Average_Marks'])
         ws.append(headers)
 
-        # Get students and their marks
-        students = Student.objects.filter(division=division, assigned_labs=lab).order_by('prn')
+        # Fetch students once and preload all relevant submissions/evaluations in one query.
+        students = list(
+            Student.objects.filter(division=division, assigned_labs=lab)
+            .select_related('user')
+            .order_by('prn')
+        )
+        student_ids = [student.id for student in students]
+
+        marks_by_student_exp = {}
+        if student_ids:
+            submissions = (
+                Submission.objects.filter(student_id__in=student_ids, experiment__lab=lab)
+                .select_related('experiment', 'evaluation')
+                .order_by('student_id', 'experiment__number', 'id')
+            )
+            for submission in submissions.iterator(chunk_size=2000):
+                experiment = getattr(submission, 'experiment', None)
+                if not experiment:
+                    continue
+                exp_num = int(experiment.number or 0)
+                if exp_num < 1 or exp_num > 10:
+                    continue
+
+                eval_obj = getattr(submission, 'evaluation', None)
+                if not eval_obj:
+                    continue
+
+                key = (submission.student_id, exp_num)
+                # Keep first submission per student/experiment to match prior behavior.
+                if key in marks_by_student_exp:
+                    continue
+
+                viva = float(eval_obj.viva_marks or 0)
+                exp_marks = float(eval_obj.experiment_marks or 0)
+                writing = float(eval_obj.writeup_marks or 0)
+                marks_by_student_exp[key] = (viva, exp_marks, writing, viva + exp_marks + writing)
+
         for student in students:
             row = [student.prn, student.user.get_full_name() or student.user.username]
             
@@ -1607,28 +1642,13 @@ def download_marks_excel(request):
             exp_count = float(0)
             
             for exp_num in range(1, 11):
-                try:
-                    experiment = Experiment.objects.get(
-                        number=exp_num,
-                        lab=lab
-                    )
-                    submission = Submission.objects.filter(
-                        student=student,
-                        experiment=experiment
-                    ).first()
-                    
-                    if submission and hasattr(submission, 'evaluation'):
-                        viva = float(submission.evaluation.viva_marks or 0)
-                        exp_marks = float(submission.evaluation.experiment_marks or 0)
-                        writing = float(submission.evaluation.writeup_marks or 0)
-                        exp_total = viva + exp_marks + writing
-                        
-                        row.extend([viva, exp_marks, writing, exp_total])
-                        total_marks = total_marks + exp_total
-                        exp_count = exp_count + 1
-                    else:
-                        row.extend([0, 0, 0, 0])
-                except Exception:
+                data = marks_by_student_exp.get((student.id, exp_num))
+                if data:
+                    viva, exp_marks, writing, exp_total = data
+                    row.extend([viva, exp_marks, writing, exp_total])
+                    total_marks = total_marks + exp_total
+                    exp_count = exp_count + 1
+                else:
                     row.extend([0, 0, 0, 0])
             
             average = float(total_marks) / float(exp_count) if exp_count > 0 else 0.0
@@ -1694,7 +1714,43 @@ def download_total_marks_excel(request):
             cell.fill = header_fill
             cell.alignment = Alignment(horizontal='center')
 
-        students = Student.objects.filter(division=division, assigned_labs=lab).order_by('prn')
+        students = list(
+            Student.objects.filter(division=division, assigned_labs=lab)
+            .select_related('user')
+            .order_by('prn')
+        )
+        student_ids = [student.id for student in students]
+
+        totals_by_student_exp = {}
+        if student_ids:
+            submissions = (
+                Submission.objects.filter(student_id__in=student_ids, experiment__lab=lab)
+                .select_related('experiment', 'evaluation')
+                .order_by('student_id', 'experiment__number', 'id')
+            )
+            for submission in submissions.iterator(chunk_size=2000):
+                experiment = getattr(submission, 'experiment', None)
+                if not experiment:
+                    continue
+                exp_num = int(experiment.number or 0)
+                if exp_num < 1 or exp_num > 10:
+                    continue
+
+                eval_obj = getattr(submission, 'evaluation', None)
+                if not eval_obj:
+                    continue
+
+                key = (submission.student_id, exp_num)
+                # Keep first submission per student/experiment to match prior behavior.
+                if key in totals_by_student_exp:
+                    continue
+
+                exp_total = float(
+                    (eval_obj.viva_marks or 0) +
+                    (eval_obj.experiment_marks or 0) +
+                    (eval_obj.writeup_marks or 0)
+                )
+                totals_by_student_exp[key] = exp_total
 
         for row_idx, student in enumerate(students, 2):
             row = [
@@ -1704,23 +1760,11 @@ def download_total_marks_excel(request):
             grand_total = float(0)
 
             for exp_num in range(1, 11):
-                try:
-                    experiment = Experiment.objects.get(number=exp_num, lab=lab)
-                    submission = Submission.objects.filter(
-                        student=student, experiment=experiment
-                    ).first()
-
-                    if submission and hasattr(submission, 'evaluation'):
-                        exp_total = float((
-                            submission.evaluation.viva_marks or 0) +
-                            (submission.evaluation.experiment_marks or 0) +
-                            (submission.evaluation.writeup_marks or 0)
-                        )
-                        grand_total = grand_total + exp_total
-                        row.append(exp_total)
-                    else:
-                        row.append(0)
-                except Exception:
+                exp_total = totals_by_student_exp.get((student.id, exp_num))
+                if exp_total is not None:
+                    grand_total = grand_total + exp_total
+                    row.append(exp_total)
+                else:
                     row.append(0)
 
             row.append(grand_total)
@@ -1729,10 +1773,13 @@ def download_total_marks_excel(request):
             # Bold grand total cell
             ws.cell(row=row_idx, column=len(headers)).font = bold_font
 
-        # Auto fit column widths
-        for col in ws.columns:
-            max_len = max(len(str(cell.value)) if cell.value else 0 for cell in col)
-            ws.column_dimensions[col[0].column_letter].width = max(12, max_len + 2)
+        # Fixed widths avoid scanning entire columns for large classes.
+        from openpyxl.utils import get_column_letter
+        ws.column_dimensions['A'].width = 28
+        ws.column_dimensions['B'].width = 18
+        for col_idx in range(3, len(headers)):
+            ws.column_dimensions[get_column_letter(col_idx)].width = 16
+        ws.column_dimensions[get_column_letter(len(headers))].width = 14
 
         buffer = BytesIO()
         wb.save(buffer)
