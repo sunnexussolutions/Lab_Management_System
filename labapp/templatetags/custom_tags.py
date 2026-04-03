@@ -27,13 +27,17 @@ def file_exists(field_file):
         if not storage or not name:
             return False
         try:
-            return storage.exists(name)
+            exists = storage.exists(name)
         except Exception:
-            # Some storage backends (e.g., Cloudinary) may not support exists().
-            # Fall back to URL availability when possible.
-            try:
-                return bool(getattr(field_file, 'url', None))
-            except Exception:
-                return False
+            exists = False
+
+        if exists:
+            return True
+
+        # Some storage backends may not accurately report exists(). Fall back to URL.
+        try:
+            return bool(getattr(field_file, 'url', None))
+        except Exception:
+            return False
     except Exception:
         return False

@@ -78,15 +78,30 @@ def _resource_exists(file_field):
         if not storage or not name:
             return False
         try:
-            return storage.exists(name)
+            exists = storage.exists(name)
         except Exception:
-            # Some storage backends may not implement exists().
-            try:
-                return bool(getattr(file_field, 'url', None))
-            except Exception:
-                return False
+            exists = False
+
+        if exists:
+            return True
+
+        # Some storage backends may not accurately report exists(). Fall back to URL.
+        try:
+            return bool(getattr(file_field, 'url', None))
+        except Exception:
+            return False
     except Exception:
         return False
+
+
+def _safe_field_url(file_field):
+    """Return a usable URL for a FileField/ImageField if possible."""
+    try:
+        if not file_field:
+            return ''
+        return file_field.url
+    except Exception:
+        return ''
 
 
 def _build_lab_resource_url(lab_id, resource_type, download=False):
@@ -1260,8 +1275,8 @@ def get_submissions_for_division(request):
             if not (has_code or has_output):
                 continue
 
-            code_url = reverse('submission_media', args=[submission.id, 'code']) if has_code else ''
-            output_url = reverse('submission_media', args=[submission.id, 'output']) if has_output else ''
+            code_url = _safe_field_url(code_field) if has_code else ''
+            output_url = _safe_field_url(output_field) if has_output else ''
 
             submissions_data.append({
                 'id': submission.id,
@@ -1999,9 +2014,9 @@ def evaluate_submission(request, submission_id):
         code_url = ''
         output_url = ''
         if _resource_exists(submission.code_screenshot):
-            code_url = reverse('submission_media', args=[submission.id, 'code'])
+            code_url = _safe_field_url(submission.code_screenshot)
         if _resource_exists(submission.output_screenshot):
-            output_url = reverse('submission_media', args=[submission.id, 'output'])
+            output_url = _safe_field_url(submission.output_screenshot)
 
         return render(request, "professor/evaluate_submission.html", {
             'submission': submission,
