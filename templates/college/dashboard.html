@@ -82,17 +82,42 @@
             background: #cdeee4;
             color: black;
             transition: left 0.35s ease;
-            z-index: 1000;
+            z-index: 1200;
             box-shadow: 2px 0 15px rgba(0, 0, 0, 0.25);
+            display: flex;
+            flex-direction: column;
         }
 
         .sidebar.active {
             left: 0;
         }
 
+        .sidebar-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.1rem 1.3rem;
+            border-bottom: 1px solid #334155;
+        }
+
+        .sidebar-header h5 {
+            margin: 0;
+            font-weight: 600;
+        }
+
+        .sidebar-close {
+            background: none;
+            border: none;
+            font-size: 1.6rem;
+            line-height: 1;
+            color: #1e293b;
+            cursor: pointer;
+        }
+
         .sidebar ul {
             list-style: none;
-            padding-top: 90px;
+            padding: 0;
+            margin: 0;
         }
 
         .sidebar li {
@@ -304,6 +329,10 @@
 
     <!-- Sidebar -->
     <div id="sidebar" class="sidebar">
+        <div class="sidebar-header">
+            <h5>Menu</h5>
+            <button type="button" class="sidebar-close" id="closeSidebar" aria-label="Close sidebar">&times;</button>
+        </div>
         <ul>
             <li><a href="#" onclick="showEditProfile()">Edit Profile</a></li>
             <li><a href="#" onclick="viewProfessors()">View Professors</a></li>
@@ -489,6 +518,11 @@
             document.getElementById('sidebar').classList.toggle('active');
             document.getElementById('main-content').classList.toggle('shifted');
         }
+        // Close sidebar from X button
+        document.getElementById('closeSidebar')?.addEventListener('click', function () {
+            document.getElementById('sidebar').classList.remove('active');
+            document.getElementById('main-content').classList.remove('shifted');
+        });
 
         // Edit Profile Modal
         function showEditProfile() {
