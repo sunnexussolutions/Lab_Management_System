@@ -1256,34 +1256,47 @@ def get_submissions_for_division(request):
         division = Division.objects.get(name__iexact=division_name, college=professor.college)
         lab = Lab.objects.get(id=lab_id)
         
-        # Only fetch new-style submissions (experiment_name set, lab FK used)
+        # Fetch both new-style (lab FK) and old-style (experiment FK) submissions.
         students = Student.objects.filter(division=division, assigned_labs=lab)
+        from django.db.models import Q
         submissions = Submission.objects.filter(
-            student__in=students,
-            lab=lab
-        ).exclude(experiment_name='').select_related('student', 'student__user').order_by('student__prn', 'submitted_at')
+            student__in=students
+        ).filter(
+            Q(lab=lab) | Q(experiment__lab=lab)
+        ).select_related('student', 'student__user', 'experiment').order_by('student__prn', 'submitted_at')
 
         submissions_data = []
         for submission in submissions:
             code_field = submission.code_screenshot
             output_field = submission.output_screenshot
 
-            has_code = _resource_exists(code_field)
-            has_output = _resource_exists(output_field)
+            code_name = getattr(code_field, 'name', '') if code_field else ''
+            output_name = getattr(output_field, 'name', '') if output_field else ''
 
             # Skip marks-only rows that do not include any uploaded files.
-            if not (has_code or has_output):
+            if not (code_name or output_name):
                 continue
 
-            code_url = _safe_field_url(code_field) if has_code else ''
-            output_url = _safe_field_url(output_field) if has_output else ''
+            code_url = _safe_field_url(code_field)
+            output_url = _safe_field_url(output_field)
+
+            if submission.experiment_name:
+                experiment_label = submission.experiment_name
+            elif submission.experiment:
+                exp_title = submission.experiment.title or ''
+                if exp_title:
+                    experiment_label = f"Experiment {submission.experiment.number} - {exp_title}"
+                else:
+                    experiment_label = f"Experiment {submission.experiment.number}"
+            else:
+                experiment_label = ''
 
             submissions_data.append({
                 'id': submission.id,
                 'student_name': submission.student.user.get_full_name() or submission.student.user.username,
                 'student_prn': submission.student.prn,
-                'experiment_name': submission.experiment_name,
-                'experiment_title': submission.experiment_name,
+                'experiment_name': experiment_label,
+                'experiment_title': experiment_label,
                 'code_screenshot': code_url,
                 'output_screenshot': output_url,
                 'submitted_at': submission.submitted_at.strftime('%d %b %Y %I:%M %p'),
