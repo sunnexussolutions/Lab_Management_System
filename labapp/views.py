@@ -229,13 +229,29 @@ def student_dashboard(request):
             'percentage': percentage
         })
 
-    # 4. Fetch Submission History (only new-style submissions with experiment_name)
+    # 4. Fetch Submission History (only rows with actual screenshots)
     history_data = []
+    from django.db.models import Q
     for lab in labs:
-        submissions = Submission.objects.filter(
-            student=student,
-            lab=lab
-        ).exclude(experiment_name='').order_by('-submitted_at')
+        submissions_qs = Submission.objects.filter(
+            student=student
+        ).filter(
+            Q(lab=lab) | Q(experiment__lab=lab)
+        ).select_related('experiment').order_by('-submitted_at')
+
+        submissions = []
+        for submission in submissions_qs:
+            code_name = getattr(submission.code_screenshot, 'name', '') if submission.code_screenshot else ''
+            output_name = getattr(submission.output_screenshot, 'name', '') if submission.output_screenshot else ''
+
+            # Skip marks-only rows that do not include any uploaded files.
+            if not (code_name or output_name):
+                continue
+
+            submission.code_url = _safe_field_url(submission.code_screenshot)
+            submission.output_url = _safe_field_url(submission.output_screenshot)
+            submissions.append(submission)
+
         history_data.append({
             'lab_id': lab.id,
             'lab_name': lab.name,

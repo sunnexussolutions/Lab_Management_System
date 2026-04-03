@@ -485,8 +485,8 @@ Select Course
                                     <!-- Screenshots -->
                                     <div class="row">
                                         <div class="col-6">
-                                            {% if submission.code_screenshot and submission.code_screenshot|file_exists %}
-                                            <img src="{{ submission.code_screenshot.url }}" class="img-fluid rounded">
+                                            {% if submission.code_url %}
+                                            <img src="{{ submission.code_url }}" class="img-fluid rounded">
                                             {% else %}
                                             <div class="small text-muted text-center">Missing</div>
                                             {% endif %}
@@ -495,8 +495,8 @@ Select Course
                                         </div>
 
                                         <div class="col-6">
-                                            {% if submission.output_screenshot and submission.output_screenshot|file_exists %}
-                                            <img src="{{ submission.output_screenshot.url }}" class="img-fluid rounded">
+                                            {% if submission.output_url %}
+                                            <img src="{{ submission.output_url }}" class="img-fluid rounded">
                                             {% else %}
                                             <div class="small text-muted text-center">Missing</div>
                                             {% endif %}
