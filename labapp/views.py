@@ -5,6 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse, FileResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
 from django.core.mail import send_mail, EmailMessage
 from django.conf import settings
@@ -158,6 +159,7 @@ def home(request):
     return render(request, "base/home.html")
 
 @login_required
+@never_cache
 def student_dashboard(request):
     try:
         student = Student.objects.get(user=request.user)
@@ -306,6 +308,7 @@ def update_profile(request):
     return redirect('student_dashboard')
 
 @login_required
+@never_cache
 def student_logout(request):
     logout(request)
     return redirect('student_login')
@@ -554,6 +557,7 @@ def college_auth(request):
     return render(request, "college/auth.html")
 
 @login_required
+@never_cache
 def college_dashboard(request):
 
     try:
@@ -580,6 +584,7 @@ def college_dashboard(request):
         }
     )
 
+@never_cache
 def college_logout(request):
     logout(request)
     return redirect("college_auth")
@@ -901,6 +906,7 @@ def professor_login(request):
     return render(request, "professor/professor_login.html")
 
 @login_required
+@never_cache
 def professor_dashboard(request):
 
     professor = Professor.objects.get(user=request.user)
@@ -943,6 +949,7 @@ def professor_dashboard(request):
     )
 
 @login_required
+@never_cache
 def professor_logout(request):
     logout(request)
     return redirect("professor_auth")
