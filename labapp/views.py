@@ -29,6 +29,7 @@ DOCUMENT_EXTENSIONS = (
     '.pdf', '.doc', '.docx', '.ppt', '.pptx',
     '.xls', '.xlsx', '.txt', '.csv', '.zip', '.rar'
 )
+MAX_EXPERIMENTS = 8
 
 
 def _safe_worksheet_title(title, fallback='Sheet1'):
@@ -202,10 +203,13 @@ def student_dashboard(request):
                 exp_marks = sub.evaluation.experiment_marks
                 writeup = sub.evaluation.writeup_marks
                 total = viva + exp_marks + writeup
+                exp_number = getattr(sub.experiment, 'number', None)
+                if exp_number is None or exp_number > MAX_EXPERIMENTS:
+                    continue
                 lab_total += total
                 exp_count += 1
                 records.append({
-                    'exp_number': sub.experiment.number,
+                    'exp_number': exp_number,
                     'viva': viva,
                     'exp_marks': exp_marks,
                     'writeup': writeup,
@@ -324,8 +328,12 @@ def export_marks_excel(request, lab_id):
     except (Student.DoesNotExist, Lab.DoesNotExist):
         return HttpResponse("Student or Lab not found.", status=404)
 
-    # Need data for up to 10 experiments ideally or just those submitted
-    submissions = Submission.objects.filter(student=student, experiment__lab=lab).select_related('evaluation', 'experiment').order_by('experiment__number')
+    # Need data for up to 8 experiments ideally or just those submitted
+    submissions = Submission.objects.filter(
+        student=student,
+        experiment__lab=lab,
+        experiment__number__lte=MAX_EXPERIMENTS
+    ).select_related('evaluation', 'experiment').order_by('experiment__number')
 
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -1220,7 +1228,7 @@ def get_students_for_division(request):
                         if match:
                             exp_num = int(match.group())
                     
-                    if exp_num is not None:
+                    if exp_num is not None and exp_num <= MAX_EXPERIMENTS:
                         marks[str(exp_num)] = {
                             'viva': float(eval_obj.viva_marks),
                             'marks': float(eval_obj.experiment_marks),
@@ -1450,7 +1458,7 @@ def save_marks(request):
                 exp_num = int(exp_data.get('experiment_number'))
             except (TypeError, ValueError):
                 continue
-            if exp_num > 0:
+            if exp_num > 0 and exp_num <= MAX_EXPERIMENTS:
                 experiment_numbers.add(exp_num)
 
     if not prns or not experiment_numbers:
@@ -1665,7 +1673,7 @@ def download_marks_excel(request):
         
         # Headers
         headers = ['PRN', 'Student Name']
-        for exp in range(1, 11): # Assuming up to 10 experiments per lab
+        for exp in range(1, MAX_EXPERIMENTS + 1): # Assuming up to 8 experiments per lab
             headers.extend([f'Exp{exp}_Viva', f'Exp{exp}_Marks', f'Exp{exp}_Writing', f'Exp{exp}_Total'])
         headers.extend(['Total_Marks', 'Average_Marks'])
         ws.append(headers)
@@ -1690,7 +1698,7 @@ def download_marks_excel(request):
                 if not experiment:
                     continue
                 exp_num = int(experiment.number or 0)
-                if exp_num < 1 or exp_num > 10:
+                if exp_num < 1 or exp_num > MAX_EXPERIMENTS:
                     continue
 
                 eval_obj = getattr(submission, 'evaluation', None)
@@ -1713,7 +1721,7 @@ def download_marks_excel(request):
             total_marks = float(0)
             exp_count = float(0)
             
-            for exp_num in range(1, 11):
+            for exp_num in range(1, MAX_EXPERIMENTS + 1):
                 data = marks_by_student_exp.get((student.id, exp_num))
                 if data:
                     viva, exp_marks, writing, exp_total = data
@@ -1773,9 +1781,9 @@ def download_total_marks_excel(request):
         header_fill = PatternFill("solid", fgColor="1E3A8A")
         header_font = Font(bold=True, color="FFFFFF")
 
-        # Build header: Student Name | PRN | Exp 1 Total | ... | Exp 10 Total | Grand Total
+        # Build header: Student Name | PRN | Exp 1 Total | ... | Exp 8 Total | Grand Total
         headers = ['Student Name', 'PRN']
-        for exp in range(1, 11):
+        for exp in range(1, MAX_EXPERIMENTS + 1):
             headers.append(f'Exp {exp} Total (15)')
         headers.append('Grand Total')
 
@@ -1805,7 +1813,7 @@ def download_total_marks_excel(request):
                 if not experiment:
                     continue
                 exp_num = int(experiment.number or 0)
-                if exp_num < 1 or exp_num > 10:
+                if exp_num < 1 or exp_num > MAX_EXPERIMENTS:
                     continue
 
                 eval_obj = getattr(submission, 'evaluation', None)
@@ -1831,7 +1839,7 @@ def download_total_marks_excel(request):
             ]
             grand_total = float(0)
 
-            for exp_num in range(1, 11):
+            for exp_num in range(1, MAX_EXPERIMENTS + 1):
                 exp_total = totals_by_student_exp.get((student.id, exp_num))
                 if exp_total is not None:
                     grand_total = grand_total + exp_total

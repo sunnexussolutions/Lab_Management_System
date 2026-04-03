@@ -1,4 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
+  const MAX_EXPERIMENTS = 8;
   const sidebar = document.getElementById("sidebar");
   const main = document.querySelector("main");
   const profileIcon = document.getElementById("profileIcon");
@@ -296,7 +297,7 @@ document.addEventListener("DOMContentLoaded", () => {
         experiments: []
       };
 
-      for (let exp = 1; exp <= 10; exp++) {
+      for (let exp = 1; exp <= MAX_EXPERIMENTS; exp++) {
         const viva = parseFloat(row.querySelector(`.exp-viva[data-exp="${exp}"]`).value) || 0;
         const marks = parseFloat(row.querySelector(`.exp-marks[data-exp="${exp}"]`).value) || 0;
         const writing = parseFloat(row.querySelector(`.exp-writing[data-exp="${exp}"]`).value) || 0;
@@ -318,7 +319,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function populateMarksTable(labId, division) {
     const tbody = document.getElementById("marksTableBody");
     const thead = document.getElementById("marksTableHead");
-    tbody.innerHTML = '<tr><td colspan="43" class="text-center py-4"><i class="bi bi-hourglass me-2"></i>Loading students...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="36" class="text-center py-4"><i class="bi bi-hourglass me-2"></i>Loading students...</td></tr>';
 
     console.log(`DEBUG: Fetching students for Division ${division}, Lab ${labId}`);
     fetch(`/professor/get-students-for-division/?division=${division}&lab_id=${labId}`)
@@ -330,7 +331,7 @@ document.addEventListener("DOMContentLoaded", () => {
       })
       .catch(error => {
         console.error("Error fetching students:", error);
-        tbody.innerHTML = '<tr><td colspan="43" class="text-center text-danger py-4">Error loading students. Please try again.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="36" class="text-center text-danger py-4">Error loading students. Please try again.</td></tr>';
       });
   }
 
@@ -343,7 +344,7 @@ document.addEventListener("DOMContentLoaded", () => {
         <th>Student Name</th>
         <th>PRN</th>
     `;
-    for (let exp = 1; exp <= 10; exp++) {
+    for (let exp = 1; exp <= MAX_EXPERIMENTS; exp++) {
       headHTML += `
         <th>Exp ${exp} Viva (5)</th>
         <th>Exp ${exp} Exp Marks (5)</th>
@@ -360,7 +361,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (!students || students.length === 0) {
       tbody.innerHTML =
-        '<tr><td colspan="44" class="text-center text-muted py-4">No students found for this division.</td></tr>';
+        '<tr><td colspan="36" class="text-center text-muted py-4">No students found for this division.</td></tr>';
       document.getElementById("classAvgSection").classList.add("d-none");
       return;
     }
@@ -369,7 +370,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const tr = document.createElement("tr");
       let html = `<td>${student.name}</td><td>${student.prn}</td>`;
 
-      for (let exp = 1; exp <= 10; exp++) {
+      for (let exp = 1; exp <= MAX_EXPERIMENTS; exp++) {
         // Ensure we check both number and string keys from the marks object
         const expMarks = (student.marks && (student.marks[exp] || student.marks[exp.toString()])) || { viva: 0, marks: 0, writing: 0 };
         html += `
@@ -406,7 +407,7 @@ document.addEventListener("DOMContentLoaded", () => {
       console.log(`DEBUG: [${studentPrn}] Recalculating totals...`);
       let grandTotal = 0;
       
-      for (let i = 0; i < 10; i++) {
+      for (let i = 0; i < MAX_EXPERIMENTS; i++) {
         // More robust parsing to ensure we handle any empty strings or invalid values
         const v = parseFloat(vivaInputs[i].value) || 0;
         const m = parseFloat(marksInputs[i].value) || 0;
@@ -428,10 +429,10 @@ document.addEventListener("DOMContentLoaded", () => {
         totalMarksInput.value = grandTotal.toFixed(1);
       }
       if (avgMarksInput) {
-        avgMarksInput.value = (grandTotal / 10).toFixed(2);
+        avgMarksInput.value = (grandTotal / MAX_EXPERIMENTS).toFixed(2);
       }
 
-      console.log(`DEBUG: [${studentPrn}] Grand Total: ${grandTotal.toFixed(1)}, Avg: ${(grandTotal / 10).toFixed(2)}`);
+      console.log(`DEBUG: [${studentPrn}] Grand Total: ${grandTotal.toFixed(1)}, Avg: ${(grandTotal / MAX_EXPERIMENTS).toFixed(2)}`);
       calculateClassOverallAverage();
     };
 
