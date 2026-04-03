@@ -50,6 +50,11 @@ name="edit_professor"
         views.download_lab_resource,
         name="student_download_lab_resource"
     ),
+    path(
+        "submission-media/<int:submission_id>/<str:media_type>/",
+        views.submission_media,
+        name="submission_media"
+    ),
     path("student/export-marks-excel/<int:lab_id>/", views.export_marks_excel, name="export_marks_excel"),
     path("student/delete-submission/<int:submission_id>/", views.delete_submission, name="delete_submission"),
 

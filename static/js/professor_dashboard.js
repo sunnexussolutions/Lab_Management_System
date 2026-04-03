@@ -1036,7 +1036,7 @@ document.addEventListener("DOMContentLoaded", () => {
         <td>${index + 1}</td>
         <td>${submission.student_name}</td>
         <td>${submission.student_prn}</td>
-        <td>${submission.experiment_name || submission.experiment_title || '???'}</td>
+        <td>${submission.experiment_name || submission.experiment_title || '--'}</td>
         <td class="text-center">
           ${codeCell}
         </td>

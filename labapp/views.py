@@ -77,7 +77,14 @@ def _resource_exists(file_field):
         name = getattr(file_field, 'name', '')
         if not storage or not name:
             return False
-        return storage.exists(name)
+        try:
+            return storage.exists(name)
+        except Exception:
+            # Some storage backends may not implement exists().
+            try:
+                return bool(getattr(file_field, 'url', None))
+            except Exception:
+                return False
     except Exception:
         return False
 
@@ -114,6 +121,23 @@ def _file_response_from_field(file_field, download=False):
         if resource_url:
             return redirect(resource_url)
         return HttpResponse("Unable to access requested file. Please re-upload from professor panel.", status=404)
+
+
+def _submission_access_allowed(request, submission):
+    """Return True when the requester can access a submission's media."""
+    is_owner_student = Student.objects.filter(user=request.user, id=submission.student_id).exists()
+
+    sub_lab = submission.lab if submission.lab else (
+        submission.experiment.lab if submission.experiment else None
+    )
+    is_owner_professor = False
+    if sub_lab is not None:
+        is_owner_professor = Professor.objects.filter(
+            user=request.user,
+            id=sub_lab.professor_id
+        ).exists()
+
+    return is_owner_student or is_owner_professor
 
 def home(request):
     return render(request, "base/home.html")
@@ -1225,16 +1249,19 @@ def get_submissions_for_division(request):
         ).exclude(experiment_name='').select_related('student', 'student__user').order_by('student__prn', 'submitted_at')
 
         submissions_data = []
-        row_index = 1
         for submission in submissions:
             code_field = submission.code_screenshot
             output_field = submission.output_screenshot
 
-            # Skip submissions created without actual uploads (marks-only rows).
-            if not code_field or not getattr(code_field, 'name', ''):
+            has_code = _resource_exists(code_field)
+            has_output = _resource_exists(output_field)
+
+            # Skip marks-only rows that do not include any uploaded files.
+            if not (has_code or has_output):
                 continue
-            if not output_field or not getattr(output_field, 'name', ''):
-                continue
+
+            code_url = reverse('submission_media', args=[submission.id, 'code']) if has_code else ''
+            output_url = reverse('submission_media', args=[submission.id, 'output']) if has_output else ''
 
             submissions_data.append({
                 'id': submission.id,
@@ -1242,12 +1269,11 @@ def get_submissions_for_division(request):
                 'student_prn': submission.student.prn,
                 'experiment_name': submission.experiment_name,
                 'experiment_title': submission.experiment_name,
-                'code_screenshot': code_field.url,
-                'output_screenshot': output_field.url,
+                'code_screenshot': code_url,
+                'output_screenshot': output_url,
                 'submitted_at': submission.submitted_at.strftime('%d %b %Y %I:%M %p'),
                 'status': submission.status
             })
-            row_index += 1
 
         return JsonResponse({'submissions': submissions_data})
     except Exception as e:
@@ -1970,9 +1996,18 @@ def evaluate_submission(request, submission_id):
             from django.urls import reverse
             return redirect(reverse('evaluate_submission', args=[submission_id]))
         
+        code_url = ''
+        output_url = ''
+        if _resource_exists(submission.code_screenshot):
+            code_url = reverse('submission_media', args=[submission.id, 'code'])
+        if _resource_exists(submission.output_screenshot):
+            output_url = reverse('submission_media', args=[submission.id, 'output'])
+
         return render(request, "professor/evaluate_submission.html", {
             'submission': submission,
-            'evaluation': evaluation
+            'evaluation': evaluation,
+            'code_url': code_url,
+            'output_url': output_url
         })
         
     except Submission.DoesNotExist:
@@ -2154,6 +2189,35 @@ def check_call(request):
         pass
         
     return JsonResponse({'active': False})
+
+
+@login_required
+def submission_media(request, submission_id, media_type):
+    """
+    Serve submission screenshots securely for students and professors.
+    """
+    try:
+        submission = Submission.objects.select_related('lab', 'experiment', 'student').get(id=submission_id)
+    except Submission.DoesNotExist:
+        return HttpResponse("Submission not found.", status=404)
+
+    if not _submission_access_allowed(request, submission):
+        return HttpResponse("You do not have access to this file.", status=403)
+
+    if media_type == 'code':
+        resource = submission.code_screenshot
+    elif media_type == 'output':
+        resource = submission.output_screenshot
+    else:
+        return HttpResponse("Invalid resource type.", status=400)
+
+    if not _resource_exists(resource):
+        return HttpResponse(
+            "File is missing in storage for this submission.",
+            status=404
+        )
+
+    return _file_response_from_field(resource, download=False)
 
 
 @login_required

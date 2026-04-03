@@ -79,9 +79,9 @@
               <div class="row mb-4">
                 <div class="col-md-6">
                   <h5>Code Screenshot</h5>
-                  {% if submission.code_screenshot and submission.code_screenshot|file_exists %}
-                    <a href="{{ submission.code_screenshot.url }}" target="_blank">
-                      <img src="{{ submission.code_screenshot.url }}" alt="Code Screenshot" class="screenshot-container w-100">
+                  {% if code_url %}
+                    <a href="{{ code_url }}" target="_blank">
+                      <img src="{{ code_url }}" alt="Code Screenshot" class="screenshot-container w-100">
                     </a>
                   {% else %}
                     <div class="text-center p-4 bg-light rounded">
@@ -92,9 +92,9 @@
                 </div>
                 <div class="col-md-6">
                   <h5>Output Screenshot</h5>
-                  {% if submission.output_screenshot and submission.output_screenshot|file_exists %}
-                    <a href="{{ submission.output_screenshot.url }}" target="_blank">
-                      <img src="{{ submission.output_screenshot.url }}" alt="Output Screenshot" class="screenshot-container w-100">
+                  {% if output_url %}
+                    <a href="{{ output_url }}" target="_blank">
+                      <img src="{{ output_url }}" alt="Output Screenshot" class="screenshot-container w-100">
                     </a>
                   {% else %}
                     <div class="text-center p-4 bg-light rounded">
