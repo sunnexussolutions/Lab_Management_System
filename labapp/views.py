@@ -1225,18 +1225,29 @@ def get_submissions_for_division(request):
         ).exclude(experiment_name='').select_related('student', 'student__user').order_by('student__prn', 'submitted_at')
 
         submissions_data = []
-        for i, submission in enumerate(submissions, 1):
+        row_index = 1
+        for submission in submissions:
+            code_field = submission.code_screenshot
+            output_field = submission.output_screenshot
+
+            # Skip submissions created without actual uploads (marks-only rows).
+            if not code_field or not getattr(code_field, 'name', ''):
+                continue
+            if not output_field or not getattr(output_field, 'name', ''):
+                continue
+
             submissions_data.append({
                 'id': submission.id,
                 'student_name': submission.student.user.get_full_name() or submission.student.user.username,
                 'student_prn': submission.student.prn,
                 'experiment_name': submission.experiment_name,
                 'experiment_title': submission.experiment_name,
-                'code_screenshot': submission.code_screenshot.url if submission.code_screenshot else '',
-                'output_screenshot': submission.output_screenshot.url if submission.output_screenshot else '',
+                'code_screenshot': code_field.url,
+                'output_screenshot': output_field.url,
                 'submitted_at': submission.submitted_at.strftime('%d %b %Y %I:%M %p'),
                 'status': submission.status
             })
+            row_index += 1
 
         return JsonResponse({'submissions': submissions_data})
     except Exception as e:

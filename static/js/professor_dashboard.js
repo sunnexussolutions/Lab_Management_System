@@ -1018,21 +1018,30 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     submissions.forEach((submission, index) => {
+      const codeUrl = submission.code_screenshot || "";
+      const outputUrl = submission.output_screenshot || "";
+      const codeCell = codeUrl
+        ? `<a href="${codeUrl}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary">
+            <i class="bi bi-eye"></i> View Code
+          </a>`
+        : `<span class="text-muted small">Missing</span>`;
+      const outputCell = outputUrl
+        ? `<a href="${outputUrl}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-success">
+            <i class="bi bi-eye"></i> View Output
+          </a>`
+        : `<span class="text-muted small">Missing</span>`;
+
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td>${index + 1}</td>
         <td>${submission.student_name}</td>
         <td>${submission.student_prn}</td>
-        <td>${submission.experiment_name || submission.experiment_title || '—'}</td>
+        <td>${submission.experiment_name || submission.experiment_title || '???'}</td>
         <td class="text-center">
-          <a href="${submission.code_screenshot}" target="_blank" class="btn btn-sm btn-outline-primary">
-            <i class="bi bi-eye"></i> View Code
-          </a>
+          ${codeCell}
         </td>
         <td class="text-center">
-          <a href="${submission.output_screenshot}" target="_blank" class="btn btn-sm btn-outline-success">
-            <i class="bi bi-eye"></i> View Output
-          </a>
+          ${outputCell}
         </td>
         <td class="text-center">
           <button class="btn btn-sm btn-primary evaluate-btn" data-submission-id="${submission.id}">
@@ -1041,7 +1050,7 @@ document.addEventListener("DOMContentLoaded", () => {
         </td>
       `;
       tbody.appendChild(tr);
-    });
+});
 
     // Add event listeners for evaluate buttons
     document.querySelectorAll('.evaluate-btn').forEach(btn => {
